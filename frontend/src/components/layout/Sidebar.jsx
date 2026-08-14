@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Plus, MessageSquare, Network, BookOpen, LogOut, Folder, PanelLeftClose, PanelLeft, Trash2, ChevronRight } from 'lucide-react'
+import { Brain, Plus, MessageSquare, Network, BookOpen, LogOut, Folder, PanelLeftClose, PanelLeft, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/store'
 import { foldersApi } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
@@ -22,7 +22,7 @@ export default function Sidebar() {
   }, [user?.token])
 
   const createFolder = async () => {
-    if (!newFolderName.trim() || !user?.token) return
+    if (!newFolderName.trim() || !user?.token || creating) return
     setCreating(true)
     try {
       const folder = await foldersApi.create(user.token, { name: newFolderName.trim() })
@@ -41,9 +41,13 @@ export default function Sidebar() {
     e.preventDefault()
     e.stopPropagation()
     if (!user?.token || !confirm('Delete this folder and all its documents?')) return
-    await foldersApi.delete(user.token, folderId)
-    setFolders(prev => prev.filter(f => f.id !== folderId))
-    if (location.pathname.includes(folderId)) navigate('/app')
+    try {
+      await foldersApi.delete(user.token, folderId)
+      setFolders(prev => prev.filter(f => f.id !== folderId))
+      if (location.pathname.includes(folderId)) navigate('/app')
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   const signOut = async () => {
@@ -81,18 +85,19 @@ export default function Sidebar() {
       <div className={`h-14 flex items-center border-b border-slate-200/80 px-3 flex-shrink-0 ${collapsed ? 'justify-center' : 'justify-between'}`}>
         {!collapsed && (
           <Link to="/app" className="flex items-center gap-2.5 text-slate-900 font-bold text-sm tracking-tight hover:opacity-90 transition-opacity">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-200">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs shadow-indigo-200">
               <Brain className="w-4 h-4 text-white" />
             </div>
             <span className="font-extrabold text-slate-900">Synthesis</span>
           </Link>
         )}
         {collapsed && (
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-200">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs shadow-indigo-200">
             <Brain className="w-4 h-4 text-white" />
           </div>
         )}
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
           className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -108,6 +113,7 @@ export default function Sidebar() {
             <div className="flex items-center justify-between px-2.5 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <span>Subject Folders</span>
               <button
+                type="button"
                 onClick={() => setShowNewFolder(!showNewFolder)}
                 className="p-1 rounded hover:bg-slate-200/60 text-slate-500 hover:text-slate-800 transition-colors"
                 title="Create folder"
@@ -135,6 +141,7 @@ export default function Sidebar() {
                       className="flex-1 h-8 rounded-md border border-indigo-300 px-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     />
                     <button
+                      type="button"
                       onClick={createFolder}
                       disabled={creating || !newFolderName.trim()}
                       className="h-8 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold disabled:opacity-50 transition-colors"
@@ -156,24 +163,30 @@ export default function Sidebar() {
               const folderActive = isActive(`/app/folder/${folder.id}`)
               return (
                 <div key={folder.id} className="folder-item group">
-                  <Link
-                    to={`/app/folder/${folder.id}`}
-                    className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-colors ${
+                  {/* Separate row flex container — NO nested button inside Link */}
+                  <div
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                       folderActive
                         ? 'bg-slate-200/70 text-slate-900 font-semibold'
                         : 'text-slate-700 hover:bg-slate-200/50 hover:text-slate-900'
                     }`}
                   >
-                    <Folder className={`w-3.5 h-3.5 flex-shrink-0 ${folderActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                    <span className="flex-1 truncate">{folder.name}</span>
+                    <Link
+                      to={`/app/folder/${folder.id}`}
+                      className="flex items-center gap-2 flex-1 min-w-0"
+                    >
+                      <Folder className={`w-3.5 h-3.5 flex-shrink-0 ${folderActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                      <span className="truncate">{folder.name}</span>
+                    </Link>
                     <button
-                      className="delete-btn p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                      type="button"
+                      className="delete-btn p-1 text-slate-400 hover:text-rose-600 rounded transition-colors flex-shrink-0 ml-1"
                       onClick={e => deleteFolder(e, folder.id)}
                       title="Delete folder"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </Link>
+                  </div>
 
                   {/* Folder Sub-nav */}
                   {folderActive && (
@@ -192,6 +205,7 @@ export default function Sidebar() {
         {collapsed && (
           <div className="flex flex-col items-center gap-2 pt-2">
             <button
+              type="button"
               onClick={() => { setCollapsed(false); setShowNewFolder(true) }}
               className="p-2 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
               title="New Folder"
@@ -205,7 +219,7 @@ export default function Sidebar() {
       {/* User Footer */}
       <div className="p-2.5 border-t border-slate-200/80 flex-shrink-0 bg-slate-100/50">
         {!collapsed ? (
-          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-white border border-slate-200/70 shadow-xs">
+          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-white border border-slate-200/70 shadow-2xs">
             <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
               {user?.email?.[0]?.toUpperCase() || '?'}
             </div>
@@ -213,6 +227,7 @@ export default function Sidebar() {
               <p className="text-xs font-semibold text-slate-800 truncate">{user?.email}</p>
             </div>
             <button
+              type="button"
               onClick={signOut}
               title="Sign out"
               className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
@@ -222,6 +237,7 @@ export default function Sidebar() {
           </div>
         ) : (
           <button
+            type="button"
             onClick={signOut}
             title="Sign out"
             className="p-2 mx-auto flex text-slate-400 hover:text-rose-600 transition-colors"

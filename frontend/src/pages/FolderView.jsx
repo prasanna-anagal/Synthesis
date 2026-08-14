@@ -84,6 +84,7 @@ export default function FolderView() {
   })
 
   const deleteDocument = async (e, docId, docName) => {
+    e.preventDefault()
     e.stopPropagation()
     if (!user?.token || !confirm(`Delete "${docName}"?`)) return
     try {
@@ -120,8 +121,9 @@ export default function FolderView() {
             </p>
           </div>
           <button
+            type="button"
             onClick={fetchDocuments}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
@@ -198,9 +200,9 @@ export default function FolderView() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => setSelectedDoc(doc)}
-                className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-indigo-200 hover:shadow-xs transition-all cursor-pointer group"
+                className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-indigo-200 hover:shadow-2xs transition-all cursor-pointer group"
               >
-                <span className="text-xl">{getFileIcon(doc.file_type)}</span>
+                <span className="text-xl flex-shrink-0">{getFileIcon(doc.file_type)}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-slate-900 truncate group-hover:text-indigo-600 transition-colors">
                     {doc.filename}
@@ -209,14 +211,15 @@ export default function FolderView() {
                     {formatBytes(doc.file_size)} {doc.page_count ? `· ${doc.page_count} pages` : ''} · {formatRelativeTime(doc.created_at)}
                   </p>
                 </div>
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold capitalize ${statusBadge[doc.status]}`}>
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold capitalize flex-shrink-0 ${statusBadge[doc.status]}`}>
                   {statusIcon[doc.status]}
                   <span>{doc.status}</span>
                 </div>
                 <button
+                  type="button"
                   onClick={e => deleteDocument(e, doc.id, doc.filename)}
                   title="Delete document"
-                  className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md transition-colors flex-shrink-0"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -233,7 +236,7 @@ export default function FolderView() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center p-4"
             onClick={() => setSelectedDoc(null)}
           >
             <motion.div
@@ -251,7 +254,7 @@ export default function FolderView() {
                     <p className="text-xs text-slate-400">ID: {selectedDoc.id.slice(0, 8)}...</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedDoc(null)} className="text-slate-400 hover:text-slate-700">
+                <button type="button" onClick={() => setSelectedDoc(null)} className="text-slate-400 hover:text-slate-700 p-1 rounded-md">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -267,8 +270,9 @@ export default function FolderView() {
 
               <div className="mt-6 flex justify-end">
                 <button
+                  type="button"
                   onClick={() => setSelectedDoc(null)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
                 >
                   Close
                 </button>
