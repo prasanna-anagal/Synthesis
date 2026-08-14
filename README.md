@@ -1,6 +1,6 @@
-# Synthesis
+# Synthesis — AI-Powered Multi-Document Research & Study Agent
 
-**Synthesis** is an AI-powered multi-document research and study agent built as a final-year engineering capstone project. Users upload PDFs, DOCX, and TXT files into subject folders. A multi-step reasoning agent answers questions by searching across all documents, citing exact sources (document name + page number), visualizing concept relationships as an interactive knowledge graph, and generating adaptive quizzes.
+**Synthesis** is a full-stack, agentic AI-powered multi-document research and study assistant built as a final-year engineering capstone project. Users upload PDFs, DOCX, and TXT files into subject folders. A multi-step reasoning agent answers questions across all documents, citing exact sources (document name + page number), visualizing concept relationships as an interactive knowledge graph, and generating adaptive quizzes.
 
 ---
 
@@ -8,63 +8,35 @@
 
 | Layer | Technology |
 |---|---|
-| Frontend | React + Vite, Tailwind CSS, shadcn/ui, D3.js |
+| Frontend | React + Vite, JavaScript (JSX), Tailwind CSS v4, shadcn/ui design, D3.js |
 | Backend | FastAPI (Python 3.11+) |
 | LLM | Groq API (`llama-3.3-70b-versatile` — swappable via `GROQ_MODEL` env var) |
-| Vector DB | ChromaDB (local, embedded mode) |
-| Embeddings | `sentence-transformers` (local, no API cost) |
+| Vector DB | ChromaDB (local embedded mode) |
+| Embeddings | `sentence-transformers` (`all-MiniLM-L6-v2`, local execution, free) |
 | Relational DB | PostgreSQL via Supabase |
-| Auth | Supabase Auth (email/password) |
+| Auth | Supabase Auth (email/password signup & login) |
 | File Storage | Local `/uploads` directory |
-| Doc Parsing | `pdfplumber` (PDF), `python-docx` (DOCX) |
+| Doc Parsing | `pdfplumber` (PDFs with per-page tracking), `python-docx` (Word) |
 
 ---
 
 ## Agent Architecture
 
-Synthesis uses an **explicit multi-step agentic reasoning loop** rather than a single-shot RAG call. The agent lives in `backend/agent/` and works as follows:
+Synthesis uses an **explicit 4-step agentic reasoning loop** located in `backend/agent/`:
 
-1. **Planner** (`agent/planner.py`) — Analyzes the user query and decides: which document(s) to search, how many retrieval rounds are needed, or whether to ask the user a clarifying question first.
-2. **Retriever** (`agent/retriever.py`) — Executes semantic vector searches against ChromaDB, potentially across multiple documents in a folder.
-3. **Evaluator** (`agent/evaluator.py`) — Determines whether the retrieved context is sufficient to answer the query, or whether another retrieval round is needed.
-4. **Synthesizer** (`agent/synthesizer.py`) — Calls the Groq API to generate a final markdown-formatted answer with inline citations (document name + page number).
+```
+User Query ──► [1. Planner] ──► [2. Retriever] ──► [3. Evaluator] ──► [4. Synthesizer] ──► SSE Stream
+                (Strategy)      (ChromaDB Search)  (Sufficiency)       (Citations)
+```
 
-Each step streams its status to the frontend via **Server-Sent Events (SSE)**, so users see the agent's reasoning live ("Searching Chapter 3 - Normalization.pdf...", "Cross-referencing with Research Paper.pdf...").
+1. **Planner (`agent/planner.py`):** Analyzes query intent to select a strategy (`single_doc`, `multi_doc`, `folder_wide`, or `clarify`).
+2. **Retriever (`agent/retriever.py`):** Executes semantic vector searches against ChromaDB per targeted document or folder-wide.
+3. **Evaluator (`agent/evaluator.py`):** Evaluates retrieved context for completeness and triggers a second retrieval pass if necessary.
+4. **Synthesizer (`agent/synthesizer.py`):** Calls Groq API to stream answers token-by-token with inline source citations (`[DocName, p.X]`).
 
 ---
 
-## Project Structure
-
-```
-synthesis/
-├── frontend/              # React + Vite app
-│   ├── src/
-│   │   ├── components/    # UI components (layout, chat, documents, graph, quiz)
-│   │   ├── pages/         # Route-level pages
-│   │   ├── hooks/         # Custom React hooks (useAuth, useSSE)
-│   │   ├── lib/           # Supabase client, API helpers
-│   │   └── store/         # Zustand state management
-│   └── ...
-├── backend/               # FastAPI app
-│   ├── agent/             # Multi-step reasoning: planner, retriever, evaluator, synthesizer
-│   ├── routes/            # API route handlers
-│   ├── models/            # Pydantic models
-│   ├── services/          # Document parsing, embedding, graph extraction, quiz generation
-│   ├── main.py
-│   └── requirements.txt
-├── .env.example
-└── README.md
-```
-
----
-
-## Setup Instructions
-
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- A [Supabase](https://supabase.com) project
-- A [Groq](https://console.groq.com) API key
+## Quick Start (Local Setup)
 
 ### 1. Clone the repository
 
@@ -73,73 +45,54 @@ git clone https://github.com/prasanna-anagal/Synthesis.git
 cd Synthesis
 ```
 
-### 2. Configure environment variables
+### 2. Set environment variables
 
+Copy `.env.example` to `.env` in the root directory:
 ```bash
 cp .env.example .env
-# Fill in your GROQ_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY,
-# SUPABASE_SERVICE_ROLE_KEY, and DATABASE_URL
 ```
+Fill in your `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `DATABASE_URL`.
 
-### 3. Set up the database
+### 3. Run database migrations
 
-Run the SQL in `backend/migrations/001_initial_schema.sql` in your Supabase SQL editor.
+Copy and run the SQL from `backend/migrations/001_initial_schema.sql` inside your Supabase project's **SQL Editor**.
 
-### 4. Run the backend
+### 4. Start the Backend (FastAPI)
 
 ```bash
 cd backend
 python -m venv .venv
 .venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+# source .venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
+API Documentation: `http://localhost:8000/docs`
 
-Backend API docs available at: `http://localhost:8000/docs`
-
-### 5. Run the frontend
+### 5. Start the Frontend (React + Vite)
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
-Frontend available at: `http://localhost:5173`
-
----
-
-## Environment Variables
-
-| Variable | Description |
-|---|---|
-| `GROQ_API_KEY` | Your Groq API key from console.groq.com |
-| `GROQ_MODEL` | LLM model to use (default: `llama-3.3-70b-versatile`) |
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anonymous/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (backend only) |
-| `DATABASE_URL` | PostgreSQL connection string from Supabase |
-| `SECRET_KEY` | Random secret for internal token signing |
-| `UPLOAD_DIR` | Local directory for uploaded files (default: `uploads`) |
-| `CHROMA_PERSIST_DIR` | ChromaDB persistence directory (default: `chroma_db`) |
-| `FRONTEND_URL` | Frontend URL for CORS (default: `http://localhost:5173`) |
+Frontend Web App: `http://localhost:5173`
 
 ---
 
-## Features
+## Project Documentation
 
-- **Multi-document RAG** — Ask questions that span multiple uploaded documents
-- **Agentic reasoning** — Multi-step plan → retrieve → evaluate → synthesize loop
-- **Live reasoning stream** — See the agent's thought process in real time via SSE
-- **Source citations** — Every answer cites the exact document and page number
-- **Knowledge graph** — Interactive D3.js visualization of concepts across documents
-- **Adaptive quizzes** — AI-generated questions that adjust difficulty based on your performance
-- **Folder organization** — Organize documents by subject/course
+- 📘 [VIVA_GUIDE.md](file:///d:/Desktop/Projects/Synthesis/VIVA_GUIDE.md) — Capstone project defense Q&A guide and architecture rationale.
+- 🚀 [DEPLOYMENT.md](file:///d:/Desktop/Projects/Synthesis/DEPLOYMENT.md) — Production deployment instructions (Vercel + Render + Supabase).
+- 🗄️ [001_initial_schema.sql](file:///d:/Desktop/Projects/Synthesis/backend/migrations/001_initial_schema.sql) — Supabase PostgreSQL database schema.
 
 ---
 
-## Deployment (future)
+## Running Tests
 
-- **Frontend** → Vercel (`npm run build`, set `VITE_API_URL` env var)
-- **Backend** → Render (set all env vars in Render dashboard)
+Run backend unit tests for parsing, chunking, and adaptive quiz calculation:
+
+```bash
+cd backend
+pytest
+```
