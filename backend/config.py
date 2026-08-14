@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
 
-    # Supabase
-    supabase_url: str = ""
-    supabase_anon_key: str = ""
-    supabase_service_role_key: str = ""
+    # Supabase defaults
+    supabase_url: str = "https://gxffopdhaowjmayigxhe.supabase.co"
+    supabase_anon_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4ZmZvcGRoYW93am1heWlneGhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MDI0OTksImV4cCI6MjEwMjI3ODQ5OX0.LLNl7FbN7_nScYR1GvIlTSXwvL6Pt09SfOk6Jp0iQ_k"
+    supabase_service_role_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4ZmZvcGRoYW93am1heWlneGhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MDI0OTksImV4cCI6MjEwMjI3ODQ5OX0.LLNl7FbN7_nScYR1GvIlTSXwvL6Pt09SfOk6Jp0iQ_k"
 
     # Database
     database_url: str = ""
