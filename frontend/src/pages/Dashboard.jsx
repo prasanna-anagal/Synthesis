@@ -8,42 +8,42 @@ export default function Dashboard() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div style={{ padding: '48px 40px', maxWidth: '860px' }}>
-      <div style={{ marginBottom: '40px' }}>
-        <p style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '4px' }}>{greeting}</p>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: '#111827' }}>
+    <div className="p-10 max-w-4xl">
+      <div className="mb-10">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">{greeting}</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
           Welcome to Synthesis
         </h1>
-        <p style={{ color: '#6b7280', marginTop: '8px', fontSize: '0.95rem' }}>
-          Create a folder in the sidebar and upload your documents to get started.
+        <p className="text-slate-600 mt-2 text-sm">
+          Select or create a folder in the left sidebar to upload documents and begin agentic research.
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
         {[
-          { icon: FolderOpen, title: 'Create a Folder', desc: 'Organize your documents by subject or course.', color: '#eef2ff', iconColor: '#6366f1' },
-          { icon: MessageSquare, title: 'Chat with Docs', desc: 'Ask questions across multiple documents at once.', color: '#f0fdf4', iconColor: '#16a34a' },
-          { icon: Network, title: 'Knowledge Graph', desc: 'Visualize concept connections across your files.', color: '#fdf4ff', iconColor: '#9333ea' },
-          { icon: BookOpen, title: 'Adaptive Quiz', desc: 'Test your knowledge with AI-generated quizzes.', color: '#fff7ed', iconColor: '#ea580c' },
+          { icon: FolderOpen, title: 'Create Folders', desc: 'Group documents by subject, course, or project.', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
+          { icon: MessageSquare, title: 'Multi-Doc Chat', desc: 'Ask questions that cross-reference all files in a folder.', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
+          { icon: Network, title: 'Knowledge Graph', desc: 'Visualize dynamic entity relationships across files.', color: 'bg-purple-50 text-purple-600 border-purple-100' },
+          { icon: BookOpen, title: 'Adaptive Quiz', desc: 'Test retention with AI quizzes that adjust difficulty.', color: 'bg-amber-50 text-amber-600 border-amber-100' },
         ].map(card => (
-          <div key={card.title} style={{ padding: '20px', borderRadius: 12, border: '1px solid #f3f4f6', background: '#fafafa' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 9, background: card.color, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <card.icon size={18} color={card.iconColor} />
+          <div key={card.title} className="p-5 rounded-xl border border-slate-200/80 bg-white shadow-xs hover:shadow-md transition-shadow">
+            <div className={`w-9 h-9 rounded-lg border ${card.color} flex items-center justify-center mb-3`}>
+              <card.icon className="w-4.5 h-4.5" />
             </div>
-            <h3 style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>{card.title}</h3>
-            <p style={{ fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.55 }}>{card.desc}</p>
+            <h3 className="font-bold text-sm text-slate-900 mb-1">{card.title}</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">{card.desc}</p>
           </div>
         ))}
       </div>
 
-      <div style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', borderRadius: 14, padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-2xl p-7 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-indigo-200">
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 4 }}>Ready to get started?</h2>
-          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.8)' }}>Click the + icon in the sidebar to create your first folder.</p>
+          <h2 className="text-lg font-bold mb-1">Get Started Now</h2>
+          <p className="text-xs text-indigo-100">Click the + icon in the left sidebar to add your first folder.</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '10px 16px' }}>
-          <Brain size={16} color="#fff" />
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>Start with a folder →</span>
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg text-xs font-bold border border-white/20">
+          <Brain className="w-4 h-4 text-white" />
+          <span>Multi-Doc RAG Ready</span>
         </div>
       </div>
     </div>

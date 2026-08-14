@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import * as d3 from 'd3'
 import { useAuthStore } from '@/store'
 import { graphApi } from '@/lib/api'
-import { Loader2, RefreshCw, Network, Search, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react'
+import { Loader2, RefreshCw, Network, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react'
 
 export default function Graph() {
   const { folderId } = useParams()
@@ -14,7 +14,6 @@ export default function Graph() {
   const [error, setError] = useState(null)
   const [graphData, setGraphData] = useState(null)
   const [selectedNode, setSelectedNode] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
   const [stats, setStats] = useState({ nodes: 0, edges: 0 })
 
   const loadGraph = async (forceRefresh = false) => {
@@ -40,9 +39,7 @@ export default function Graph() {
     const { width, height } = el.getBoundingClientRect()
     d3.select(el).selectAll('*').remove()
 
-    const svg = d3.select(el)
-      .attr('width', width).attr('height', height)
-
+    const svg = d3.select(el).attr('width', width).attr('height', height)
     const g = svg.append('g')
 
     const zoom = d3.zoom().scaleExtent([0.3, 3.5]).on('zoom', e => g.attr('transform', e.transform))
@@ -55,21 +52,21 @@ export default function Graph() {
     const getColor = (node) => {
       if (node.group === 1) return '#c7d2fe'
       if (node.group === 2) return '#818cf8'
-      if (node.group >= 3) return '#6366f1'
+      if (node.group >= 3) return '#4f46e5'
       return '#e0e7ff'
     }
 
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(edges).id(d => d.id).distance(d => 80 + (4 - Math.min(d.weight, 4)) * 15))
-      .force('charge', d3.forceManyBody().strength(-200))
+      .force('charge', d3.forceManyBody().strength(-220))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(d => Math.sqrt(d.frequency || 1) * 8 + 18))
+      .force('collision', d3.forceCollide().radius(d => Math.sqrt(d.frequency || 1) * 8 + 20))
 
     const link = g.append('g').selectAll('line')
       .data(edges).enter().append('line')
-      .attr('stroke', '#e0e7ff')
+      .attr('stroke', '#e2e8f0')
       .attr('stroke-width', d => Math.min(Math.sqrt(d.weight), 3))
-      .attr('stroke-opacity', 0.75)
+      .attr('stroke-opacity', 0.8)
 
     const node = g.append('g').selectAll('g')
       .data(nodes).enter().append('g')
@@ -83,8 +80,9 @@ export default function Graph() {
     node.append('circle')
       .attr('r', d => Math.min(Math.sqrt((d.frequency || 1)) * 5 + 8, 28))
       .attr('fill', d => getColor(d))
-      .attr('stroke', d => d.group >= 2 ? '#6366f1' : '#c7d2fe')
-      .attr('stroke-width', 1.5)
+      .attr('stroke', '#ffffff')
+      .attr('stroke-width', 2)
+      .attr('class', 'shadow-md')
       .on('click', (e, d) => {
         e.stopPropagation()
         setSelectedNode(d)
@@ -96,8 +94,8 @@ export default function Graph() {
       .attr('dy', d => Math.min(Math.sqrt((d.frequency || 1)) * 5 + 8, 28) + 14)
       .attr('font-size', '10px')
       .attr('font-family', 'Inter, sans-serif')
-      .attr('fill', '#374151')
-      .attr('font-weight', '500')
+      .attr('fill', '#334155')
+      .attr('font-weight', '600')
 
     simulation.on('tick', () => {
       link
@@ -122,78 +120,80 @@ export default function Graph() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: '#9ca3af' }}>
-      <Loader2 size={20} className="animate-spin" /> Extracting concept graph...
+    <div className="flex items-center justify-center h-screen gap-2.5 text-slate-400 text-sm">
+      <Loader2 className="w-5 h-5 animate-spin text-indigo-600" /> Generating Knowledge Graph...
     </div>
   )
 
   if (error) return (
-    <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
-      <Network size={36} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
-      <p style={{ fontWeight: 600, marginBottom: 4 }}>Could not load graph</p>
-      <p style={{ fontSize: '0.875rem', marginBottom: 16 }}>{error}</p>
-      <button onClick={() => loadGraph(true)} style={{ padding: '8px 16px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-        <RefreshCw size={13} /> Retry
+    <div className="p-10 text-center text-slate-600">
+      <Network className="w-10 h-10 mx-auto mb-2.5 opacity-40" />
+      <p className="font-bold text-slate-800 mb-1">Could not load graph</p>
+      <p className="text-xs mb-4 text-slate-500">{error}</p>
+      <button onClick={() => loadGraph(true)} className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold text-xs">
+        Retry
       </button>
     </div>
   )
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-50/30">
       {/* Header */}
-      <div style={{ padding: '14px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <div className="px-6 py-4 border-b border-slate-200/80 bg-white flex items-center justify-between flex-shrink-0">
         <div>
-          <h2 style={{ fontWeight: 800, fontSize: '1.1rem', color: '#111827', letterSpacing: '-0.02em' }}>Knowledge Graph</h2>
-          <p style={{ fontSize: '0.78rem', color: '#9ca3af' }}>{stats.nodes} concepts · {stats.edges} connections</p>
+          <h2 className="font-extrabold text-lg text-slate-900 tracking-tight">Interactive Knowledge Graph</h2>
+          <p className="text-xs text-slate-500">{stats.nodes} extracted concepts · {stats.edges} co-occurrence edges</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#c7d2fe' }} /> 1 doc</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#818cf8' }} /> 2 docs</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#6366f1' }} /> 3+ docs</span>
+        <div className="flex items-center gap-4">
+          <div className="text-xs text-slate-500 flex items-center gap-3 hidden sm:flex">
+            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-indigo-200" /> 1 document</span>
+            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-indigo-400" /> 2 documents</span>
+            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-indigo-600" /> 3+ documents</span>
           </div>
-          <button onClick={() => loadGraph(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>
-            <RefreshCw size={12} /> Refresh
+          <button
+            onClick={() => loadGraph(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Graph
           </button>
         </div>
       </div>
 
-      {/* Graph canvas */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      {/* Graph Viewport */}
+      <div className="flex-1 relative overflow-hidden">
         {(!graphData?.nodes?.length) ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: '#9ca3af' }}>
-            <Network size={36} style={{ opacity: 0.35 }} />
-            <p style={{ fontSize: '0.875rem' }}>No indexed documents yet — upload and process documents first.</p>
+          <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-2">
+            <Network className="w-10 h-10 opacity-30" />
+            <p className="text-sm font-medium">No documents indexed in this folder yet.</p>
           </div>
         ) : (
-          <svg ref={svgRef} style={{ width: '100%', height: '100%' }} />
+          <svg ref={svgRef} className="w-full h-full" />
         )}
 
-        {/* Zoom controls floating bar */}
+        {/* Zoom Controls */}
         {graphData?.nodes?.length > 0 && (
-          <div style={{ position: 'absolute', bottom: 20, right: 20, display: 'flex', gap: 4, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.08)' }}>
-            <button onClick={() => handleZoom(1.3)} title="Zoom in" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#374151', borderRadius: 5 }}><ZoomIn size={16} /></button>
-            <button onClick={() => handleZoom(0.7)} title="Zoom out" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#374151', borderRadius: 5 }}><ZoomOut size={16} /></button>
-            <button onClick={() => handleZoom(0)} title="Reset zoom" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#374151', borderRadius: 5 }}><Maximize2 size={16} /></button>
+          <div className="absolute bottom-6 right-6 flex gap-1 bg-white border border-slate-200/90 rounded-xl p-1 shadow-md">
+            <button onClick={() => handleZoom(1.3)} title="Zoom in" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={() => handleZoom(0.7)} title="Zoom out" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><ZoomOut className="w-4 h-4" /></button>
+            <button onClick={() => handleZoom(0)} title="Reset zoom" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Maximize2 className="w-4 h-4" /></button>
           </div>
         )}
 
-        {/* Node info panel */}
+        {/* Concept Inspector Overlay */}
         {selectedNode && (
-          <div style={{ position: 'absolute', top: 16, right: 16, width: 250, background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', padding: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#6366f1' }} />
-              <h3 style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827' }}>{selectedNode.label}</h3>
+          <div className="absolute top-4 right-4 w-64 bg-white rounded-2xl border border-slate-200 p-5 shadow-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+              <h3 className="font-bold text-sm text-slate-900">{selectedNode.label}</h3>
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#6b7280', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <div>Frequency across docs: <strong>{selectedNode.frequency}</strong></div>
-              <div>Spans <strong>{selectedNode.doc_ids?.length || 1}</strong> document(s)</div>
+            <div className="text-xs text-slate-600 space-y-2">
+              <div>Frequency: <strong className="text-slate-900">{selectedNode.frequency}</strong></div>
+              <div>Appears in <strong className="text-slate-900">{selectedNode.doc_ids?.length || 1}</strong> document(s)</div>
               {selectedNode.doc_names?.length > 0 && (
-                <div>
-                  <div style={{ fontWeight: 600, marginBottom: 3, color: '#374151' }}>Documents:</div>
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="font-semibold text-slate-700 block mb-1">Source Files:</span>
                   {selectedNode.doc_names.map(name => (
-                    <div key={name} style={{ padding: '2px 0', color: '#6366f1', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📄 {name}</div>
+                    <div key={name} className="text-indigo-600 truncate py-0.5">📄 {name}</div>
                   ))}
                 </div>
               )}

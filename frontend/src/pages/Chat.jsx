@@ -13,21 +13,29 @@ import { formatRelativeTime } from '@/lib/utils'
 function ReasoningSteps({ steps, isStreaming }) {
   const [expanded, setExpanded] = useState(true)
   return (
-    <div style={{ background: '#f5f3ff', borderRadius: 9, padding: '10px 13px', marginBottom: 10, border: '1px solid #e0e7ff' }}>
-      <button onClick={() => setExpanded(!expanded)}
-        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%' }}>
-        <Brain size={13} color="#6366f1" />
-        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6366f1', flex: 1, textAlign: 'left' }}>Agent reasoning</span>
-        {isStreaming && <div className="animate-pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366f1' }} />}
-        {expanded ? <ChevronDown size={12} color="#6366f1" /> : <ChevronRight size={12} color="#6366f1" />}
+    <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-3.5 mb-3 text-xs">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 w-full text-left font-bold text-indigo-700 hover:text-indigo-900"
+      >
+        <Brain className="w-3.5 h-3.5 text-indigo-600" />
+        <span className="flex-1">Agent Multi-Step Reasoning</span>
+        {isStreaming && <div className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />}
+        {expanded ? <ChevronDown className="w-3.5 h-3.5 text-indigo-500" /> : <ChevronRight className="w-3.5 h-3.5 text-indigo-500" />}
       </button>
+
       <AnimatePresence>
         {expanded && steps.length > 0 && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            style={{ overflow: 'hidden', marginTop: 8, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mt-2.5 space-y-1 pl-1"
+          >
             {steps.map((step, i) => (
-              <div key={i} style={{ fontSize: '0.77rem', color: '#6366f1', display: 'flex', alignItems: 'flex-start', gap: '5px', opacity: 0.85 }}>
-                <span>{'›'}</span><span>{step}</span>
+              <div key={i} className="text-[11px] text-indigo-800 flex items-start gap-1.5 opacity-90">
+                <span className="font-bold text-indigo-500">›</span>
+                <span>{step}</span>
               </div>
             ))}
           </motion.div>
@@ -40,18 +48,20 @@ function ReasoningSteps({ steps, isStreaming }) {
 function CitationChip({ citation, index }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div style={{ fontSize: '0.77rem', border: '1px solid #e0e7ff', borderRadius: 7, overflow: 'hidden', marginTop: 4 }}>
-      <button onClick={() => setExpanded(!expanded)}
-        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 9px', background: '#eef2ff', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
-        <FileText size={11} color="#6366f1" />
-        <span style={{ color: '#6366f1', fontWeight: 600 }}>[{index + 1}] {citation.document_name}</span>
-        {citation.page_number && <span style={{ color: '#9ca3af', marginLeft: 'auto' }}>p.{citation.page_number}</span>}
-        {expanded ? <ChevronDown size={11} color="#9ca3af" /> : <ChevronRight size={11} color="#9ca3af" />}
+    <div className="text-xs border border-indigo-100 rounded-lg overflow-hidden mt-1.5 shadow-2xs">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 w-full px-3 py-1.5 bg-indigo-50/60 hover:bg-indigo-100/60 text-left font-semibold text-indigo-700 transition-colors"
+      >
+        <FileText className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
+        <span className="truncate flex-1">[{index + 1}] {citation.document_name}</span>
+        {citation.page_number && <span className="text-[11px] text-slate-400 font-normal">p.{citation.page_number}</span>}
+        {expanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
       </button>
       <AnimatePresence>
         {expanded && (
-          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '8px 10px', fontSize: '0.77rem', color: '#6b7280', lineHeight: 1.55, borderTop: '1px solid #e0e7ff', background: '#fff', fontStyle: 'italic' }}>
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+            <div className="p-2.5 text-xs text-slate-600 italic bg-white border-t border-indigo-100 leading-relaxed">
               "{citation.excerpt}"
             </div>
           </motion.div>
@@ -75,26 +85,28 @@ function Message({ msg, isStreaming, streamingSteps }) {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '85%', flexDirection: isUser ? 'row-reverse' : 'row' }}>
-        <div style={{ width: 28, height: 28, borderRadius: '50%', background: isUser ? '#6366f1' : '#f3f4f6', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-          {isUser ? <User size={14} color="#fff" /> : <Bot size={14} color="#6b7280" />}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex flex-col mb-6 ${isUser ? 'items-end' : 'items-start'}`}
+    >
+      <div className={`flex gap-3 max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+          isUser ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
+        }`}>
+          {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex-1 min-w-0">
           {!isUser && steps.length > 0 && <ReasoningSteps steps={steps} isStreaming={isStreaming} />}
-          <div style={{
-            position: 'relative',
-            padding: isUser ? '10px 14px' : '12px 16px',
-            borderRadius: isUser ? '12px 12px 4px 12px' : '4px 12px 12px 12px',
-            background: isUser ? '#6366f1' : '#f9fafb',
-            border: isUser ? 'none' : '1px solid #f0f0f0',
-            color: isUser ? '#fff' : '#111827',
-          }} className="message-box">
+          <div className={`relative p-4 text-sm leading-relaxed ${
+            isUser
+              ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-xs shadow-xs font-medium'
+              : 'bg-slate-50 border border-slate-200/80 text-slate-900 rounded-2xl rounded-tl-xs shadow-2xs'
+          }`}>
             {isUser ? (
-              <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.55 }}>{msg.content}</p>
+              <p className="m-0">{msg.content}</p>
             ) : (
-              <div className="prose" style={{ fontSize: '0.9rem' }}>
+              <div className="prose">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || '...'}</ReactMarkdown>
               </div>
             )}
@@ -102,19 +114,15 @@ function Message({ msg, isStreaming, streamingSteps }) {
               <button
                 onClick={copyContent}
                 title="Copy response"
-                style={{
-                  position: 'absolute', top: 8, right: 8, background: '#fff',
-                  border: '1px solid #e5e7eb', borderRadius: 5, padding: 3,
-                  cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center',
-                }}
+                className="absolute top-2.5 right-2.5 p-1 bg-white border border-slate-200 rounded-md text-slate-400 hover:text-slate-700 shadow-2xs transition-colors"
               >
-                {copied ? <Check size={12} color="#22c55e" /> : <Copy size={12} />}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             )}
           </div>
           {!isUser && citations.length > 0 && (
-            <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sources</span>
+            <div className="mt-2.5 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Citations</span>
               {citations.map((c, i) => <CitationChip key={i} citation={c} index={i} />)}
             </div>
           )}
@@ -167,12 +175,12 @@ export default function Chat() {
     setChats(prev => [chat, ...prev])
     setActiveChatId(chat.id)
     setMessages([])
-    toast.success('Started new chat session')
+    toast.success('New chat session started')
   }
 
   const deleteChatSession = async (e, chatId) => {
     e.stopPropagation()
-    if (!user?.token || !confirm('Delete this chat session?')) return
+    if (!user?.token || !confirm('Delete chat?')) return
     await chatApi.deleteChat(user.token, chatId)
     setChats(prev => prev.filter(c => c.id !== chatId))
     if (activeChatId === chatId) {
@@ -233,7 +241,7 @@ export default function Chat() {
           }
         },
         () => { setIsStreaming(false) },
-        (err) => { setIsStreaming(false); toast.error('Connection interrupted'); console.error(err) }
+        (err) => { setIsStreaming(false); toast.error('Streaming connection interrupted'); console.error(err) }
       )
     } catch (err) {
       setIsStreaming(false)
@@ -243,45 +251,55 @@ export default function Chat() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      {/* Chat history sidebar */}
-      <div style={{ width: 220, borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', background: '#fafafa', flexShrink: 0 }}>
-        <div style={{ padding: '14px 12px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151' }}>Chats</span>
-          <button onClick={createAndSelectChat}
-            style={{ background: '#6366f1', border: 'none', cursor: 'pointer', color: '#fff', padding: '4px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', fontWeight: 600 }}>
-            <Plus size={12} /> New
+    <div className="flex h-screen overflow-hidden bg-white">
+      {/* Chat History Panel */}
+      <div className="w-56 border-r border-slate-200/80 bg-slate-50/50 flex flex-col flex-shrink-0">
+        <div className="p-3.5 border-b border-slate-200/80 flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-800">Chat History</span>
+          <button
+            onClick={createAndSelectChat}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> New
           </button>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {chats.map(chat => (
-            <div key={chat.id} style={{ position: 'relative', display: 'flex', alignItems: 'center' }} className="folder-item">
-              <button onClick={() => setActiveChatId(chat.id)}
-                style={{ width: '100%', textAlign: 'left', padding: '8px 10px', paddingRight: '24px', borderRadius: 7, border: 'none', cursor: 'pointer', background: activeChatId === chat.id ? '#eef2ff' : 'transparent', marginBottom: 2, transition: 'background 0.12s' }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: activeChatId === chat.id ? 600 : 400, color: activeChatId === chat.id ? '#6366f1' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{formatRelativeTime(chat.updated_at)}</div>
+            <div key={chat.id} className="folder-item relative flex items-center">
+              <button
+                onClick={() => setActiveChatId(chat.id)}
+                className={`w-full text-left p-2.5 rounded-lg text-xs transition-colors pr-7 ${
+                  activeChatId === chat.id
+                    ? 'bg-indigo-50 text-indigo-600 font-semibold'
+                    : 'text-slate-700 hover:bg-slate-200/50'
+                }`}
+              >
+                <div className="truncate font-medium">{chat.title}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">{formatRelativeTime(chat.updated_at)}</div>
               </button>
-              <button className="delete-btn" onClick={e => deleteChatSession(e, chat.id)}
-                style={{ position: 'absolute', right: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 2, borderRadius: 4 }}>
-                <Trash2 size={11} />
+              <button
+                onClick={e => deleteChatSession(e, chat.id)}
+                className="delete-btn absolute right-2 p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                title="Delete chat"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Main chat area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-        {/* Messages */}
-        <div ref={chatContainerRef} onScroll={handleScroll} style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
+      {/* Main Chat Interface */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div ref={chatContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-8 space-y-6">
           {!activeChatId && messages.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', color: '#9ca3af' }}>
-              <div style={{ width: 52, height: 52, borderRadius: 13, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Sparkles size={24} color="#6366f1" />
+            <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                <Sparkles className="w-7 h-7 text-indigo-600" />
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontWeight: 700, color: '#374151', fontSize: '1rem', marginBottom: 4 }}>Start a conversation</p>
-                <p style={{ fontSize: '0.875rem' }}>Ask anything about your documents in this folder.</p>
+              <div>
+                <p className="font-bold text-slate-800 text-base">Multi-Document RAG Chat</p>
+                <p className="text-xs text-slate-500 max-w-sm mt-1">Ask questions across all indexed files in this folder.</p>
               </div>
             </div>
           )}
@@ -298,41 +316,37 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Scroll to bottom floating button */}
+        {/* Scroll Bottom Button */}
         {showScrollBottom && (
           <button
             onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            style={{
-              position: 'absolute', bottom: 85, right: 32, background: '#fff',
-              border: '1px solid #e5e7eb', borderRadius: '50%', width: 36, height: 36,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'pointer', color: '#6366f1',
-            }}
+            className="absolute bottom-24 right-8 bg-white border border-slate-200 p-2.5 rounded-full shadow-lg text-indigo-600 hover:bg-slate-50 transition-colors"
           >
-            <ArrowDown size={16} />
+            <ArrowDown className="w-4 h-4" />
           </button>
         )}
 
-        {/* Input */}
-        <div style={{ borderTop: '1px solid #f0f0f0', padding: '16px 24px' }}>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', background: '#f9fafb', borderRadius: 12, border: '1.5px solid #e5e7eb', padding: '10px 14px', transition: 'border-color 0.15s' }}
-            onFocus={e => e.currentTarget.style.borderColor = '#6366f1'}
-            onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}>
+        {/* Input Bar */}
+        <div className="p-4 border-t border-slate-200/80 bg-white">
+          <div className="flex items-end gap-2.5 bg-slate-50 border border-slate-200 rounded-2xl p-3 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-              placeholder="Ask a question about your documents... (Enter to send, Shift+Enter for newline)"
+              placeholder="Ask a question across folder documents... (Enter to send, Shift+Enter for newline)"
               rows={1}
-              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', resize: 'none', fontSize: '0.9rem', color: '#111827', lineHeight: 1.55, fontFamily: 'inherit', maxHeight: '120px', overflowY: 'auto' }}
+              className="flex-1 bg-transparent border-none outline-none resize-none text-sm text-slate-900 placeholder:text-slate-400 max-h-32"
             />
-            <button onClick={sendMessage} disabled={isStreaming || !input.trim()}
-              style={{ width: 34, height: 34, borderRadius: 8, border: 'none', background: isStreaming || !input.trim() ? '#e5e7eb' : '#6366f1', color: isStreaming || !input.trim() ? '#9ca3af' : '#fff', cursor: isStreaming || !input.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.15s' }}>
-              {isStreaming ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+            <button
+              onClick={sendMessage}
+              disabled={isStreaming || !input.trim()}
+              className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white disabled:text-slate-400 flex items-center justify-center flex-shrink-0 transition-colors shadow-2xs"
+            >
+              {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
           </div>
-          <p style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center', marginTop: '6px' }}>
-            Agent will reason across your uploaded documents and cite sources
+          <p className="text-[11px] text-slate-400 text-center mt-2">
+            AI Agent will reason across files and provide inline page citations
           </p>
         </div>
       </div>

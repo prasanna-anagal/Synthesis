@@ -4,8 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { Brain, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-const strengthColors = ['#e5e7eb', '#ef4444', '#f59e0b', '#22c55e']
-const strengthLabels = ['', 'Too short', 'Good', 'Strong']
+const strengthColors = ['bg-slate-200', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500']
+const strengthLabels = ['', 'Too short', 'Good strength', 'Strong password']
 
 export default function Signup() {
   const navigate = useNavigate()
@@ -27,73 +27,108 @@ export default function Signup() {
     else { setSuccess(true); setLoading(false); setTimeout(() => navigate('/app'), 2500) }
   }
 
-  const inputStyle = { width: '100%', height: '42px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s', fontFamily: 'inherit' }
-
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f3ff 0%, #fff 60%)', padding: '24px' }}>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', boxShadow: '0 8px 40px rgba(0,0,0,0.08)', padding: '40px 36px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Brain size={18} color="#fff" /></div>
-            <span style={{ fontWeight: 800, fontSize: '1.15rem', color: '#111827', letterSpacing: '-0.02em' }}>Synthesis</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-indigo-50/50 via-white to-white p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-8"
+      >
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+            <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-200">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-extrabold text-xl text-slate-900 tracking-tight">Synthesis</span>
           </Link>
-          <h1 style={{ fontSize: '1.3rem', fontWeight: 700, marginTop: '22px', marginBottom: '5px', color: '#111827' }}>Create your account</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Start studying smarter today</p>
+          <h1 className="text-xl font-extrabold text-slate-900 mb-1">Create Account</h1>
+          <p className="text-xs text-slate-500">Start organizing and researching your documents</p>
         </div>
 
         {success ? (
-          <div style={{ textAlign: 'center', padding: '24px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <CheckCircle2 size={48} color="#22c55e" />
-            <h3 style={{ fontWeight: 700, color: '#111827' }}>Account created!</h3>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Check your email to confirm, then you'll be redirected automatically.</p>
+          <div className="py-6 text-center space-y-3">
+            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
+            <h3 className="font-bold text-slate-900 text-base">Account Created!</h3>
+            <p className="text-xs text-slate-500">Redirecting to your workspace dashboard...</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label style={{ fontSize: '0.83rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>Email</label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                <input id="signup-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required
-                  style={{ ...inputStyle, paddingLeft: '36px', paddingRight: '12px' }}
-                  onFocus={e => e.target.style.borderColor = '#6366f1'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Email Address</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="signup-email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full pl-9 pr-3 h-10 rounded-xl border border-slate-200 text-xs text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all bg-slate-50/30"
+                />
               </div>
             </div>
+
             <div>
-              <label style={{ fontSize: '0.83rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>Password</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                <input id="signup-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 6 characters" required
-                  style={{ ...inputStyle, paddingLeft: '36px', paddingRight: '40px' }}
-                  onFocus={e => e.target.style.borderColor = '#6366f1'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}>
-                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="signup-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  required
+                  className="w-full pl-9 pr-9 h-10 rounded-xl border border-slate-200 text-xs text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all bg-slate-50/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {password && (
-                <div style={{ marginTop: '7px' }}>
-                  <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
-                    {[1,2,3].map(l => <div key={l} style={{ flex: 1, height: 3, borderRadius: 2, background: strength >= l ? strengthColors[strength] : '#e5e7eb', transition: 'background 0.2s' }} />)}
+                <div className="mt-2 space-y-1">
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map(l => (
+                      <div
+                        key={l}
+                        className={`h-1 flex-1 rounded-full transition-all ${
+                          strength >= l ? strengthColors[strength] : 'bg-slate-200'
+                        }`}
+                      />
+                    ))}
                   </div>
-                  <span style={{ fontSize: '0.73rem', color: strengthColors[strength] }}>{strengthLabels[strength]}</span>
+                  <span className="text-[10px] text-slate-400 font-medium">{strengthLabels[strength]}</span>
                 </div>
               )}
             </div>
 
-            {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, padding: '9px 12px', fontSize: '0.83rem', color: '#dc2626' }}>{error}</div>}
+            {error && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+                {error}
+              </div>
+            )}
 
-            <button type="submit" disabled={loading}
-              style={{ height: '42px', borderRadius: 8, border: 'none', background: loading ? '#a5b4fc' : '#6366f1', color: '#fff', fontWeight: 700, fontSize: '0.92rem', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: 'inherit' }}>
-              {loading && <Loader2 size={15} className="animate-spin" />}
-              Create account
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold text-xs shadow-md shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Create Account
             </button>
           </form>
         )}
 
-        <p style={{ textAlign: 'center', marginTop: '22px', fontSize: '0.85rem', color: '#6b7280' }}>
+        <p className="text-center text-xs text-slate-500 mt-6">
           Already have an account?{' '}
-          <Link to="/login" style={{ color: '#6366f1', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
+          <Link to="/login" className="text-indigo-600 font-bold hover:underline">
+            Sign in
+          </Link>
         </p>
       </motion.div>
     </div>

@@ -3,23 +3,23 @@ import { useParams, Link } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { Upload, FileText, Trash2, RefreshCw, CheckCircle2, XCircle, Loader2, Clock, MessageSquare, Network, BookOpen, Eye, X, HardDrive, FileCheck } from 'lucide-react'
+import { Upload, FileText, Trash2, RefreshCw, CheckCircle2, XCircle, Loader2, Clock, MessageSquare, Network, BookOpen, X } from 'lucide-react'
 import { useAuthStore } from '@/store'
 import { documentsApi, foldersApi } from '@/lib/api'
 import { formatBytes, formatRelativeTime, getFileIcon } from '@/lib/utils'
 
 const statusIcon = {
-  pending: <Clock size={13} color="#f59e0b" />,
-  processing: <Loader2 size={13} color="#6366f1" className="animate-spin" />,
-  indexed: <CheckCircle2 size={13} color="#22c55e" />,
-  error: <XCircle size={13} color="#ef4444" />,
+  pending: <Clock className="w-3.5 h-3.5 text-amber-500" />,
+  processing: <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />,
+  indexed: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />,
+  error: <XCircle className="w-3.5 h-3.5 text-rose-500" />,
 }
 
-const statusLabel = {
-  pending: 'Pending',
-  processing: 'Processing...',
-  indexed: 'Ready',
-  error: 'Error',
+const statusBadge = {
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  processing: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  indexed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  error: 'bg-rose-50 text-rose-700 border-rose-200',
 }
 
 export default function FolderView() {
@@ -49,7 +49,6 @@ export default function FolderView() {
     ]).finally(() => setLoading(false))
   }, [user?.token, folderId, fetchDocuments])
 
-  // Poll processing documents
   useEffect(() => {
     const processingDocs = documents.filter(d => d.status === 'pending' || d.status === 'processing')
     if (!processingDocs.length) return
@@ -67,7 +66,7 @@ export default function FolderView() {
         toast.success(`Uploaded ${file.name}. Processing started...`)
         await fetchDocuments()
       } catch (e) {
-        toast.error(`Upload failed for ${file.name}: ${e.message}`)
+        toast.error(`Upload failed: ${e.message}`)
       } finally {
         setUploading(prev => prev.filter(u => u.id !== uploadId))
       }
@@ -99,8 +98,8 @@ export default function FolderView() {
 
   if (loading) {
     return (
-      <div style={{ padding: 40, display: 'flex', alignItems: 'center', gap: 10, color: '#9ca3af' }}>
-        <Loader2 size={18} className="animate-spin" /> Loading folder...
+      <div className="p-10 flex items-center gap-2.5 text-slate-400 text-sm">
+        <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> Loading folder...
       </div>
     )
   }
@@ -108,199 +107,168 @@ export default function FolderView() {
   const indexedCount = documents.filter(d => d.status === 'indexed').length
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: '900px' }}>
+    <div className="p-10 max-w-4xl">
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.03em', color: '#111827', marginBottom: '4px' }}>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 mb-1">
               {folder?.name || 'Folder'}
             </h1>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              {indexedCount} of {documents.length} document(s) ready for search
+            <p className="text-sm text-slate-500">
+              {indexedCount} of {documents.length} document(s) ready for semantic RAG search
             </p>
           </div>
           <button
             onClick={fetchDocuments}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '6px 12px', borderRadius: 7, border: '1px solid #e5e7eb',
-              background: '#fff', fontSize: '0.8rem', color: '#374151',
-              cursor: 'pointer', fontWeight: 500,
-            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
           >
-            <RefreshCw size={13} /> Refresh
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
         </div>
 
-        {/* Quick nav */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+        {/* Quick nav bar */}
+        <div className="flex gap-2 mt-5">
           {[
             { to: `/app/folder/${folderId}/chat`, icon: MessageSquare, label: 'Chat' },
-            { to: `/app/folder/${folderId}/graph`, icon: Network, label: 'Graph' },
-            { to: `/app/folder/${folderId}/quiz`, icon: BookOpen, label: 'Quiz' },
+            { to: `/app/folder/${folderId}/graph`, icon: Network, label: 'Knowledge Graph' },
+            { to: `/app/folder/${folderId}/quiz`, icon: BookOpen, label: 'Adaptive Quiz' },
           ].map(item => (
-            <Link key={item.to} to={item.to} style={{
-              display: 'inline-flex', alignItems: 'center', gap: '5px',
-              padding: '6px 14px', borderRadius: 7, fontSize: '0.83rem',
-              background: '#f3f4f6', color: '#374151', textDecoration: 'none',
-              fontWeight: 500, border: '1px solid #e5e7eb', transition: 'all 0.12s',
-            }}>
-              <item.icon size={13} /> {item.label}
+            <Link
+              key={item.to}
+              to={item.to}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-100/80 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200/80 hover:border-indigo-200 transition-all"
+            >
+              <item.icon className="w-3.5 h-3.5" />
+              <span>{item.label}</span>
             </Link>
           ))}
         </div>
       </div>
 
       {/* Upload Zone */}
-      <div {...getRootProps()} style={{
-        border: `2px dashed ${isDragActive ? '#6366f1' : '#e5e7eb'}`,
-        borderRadius: 12, padding: '36px 24px', textAlign: 'center',
-        background: isDragActive ? '#eef2ff' : '#fafafa',
-        cursor: 'pointer', transition: 'all 0.15s', marginBottom: '28px',
-      }}>
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+          isDragActive
+            ? 'border-indigo-500 bg-indigo-50/60'
+            : 'border-slate-200 bg-slate-50/40 hover:bg-slate-50 hover:border-slate-300'
+        }`}
+      >
         <input {...getInputProps()} />
-        <Upload size={28} color={isDragActive ? '#6366f1' : '#9ca3af'} style={{ margin: '0 auto 10px' }} />
-        <p style={{ fontWeight: 600, color: isDragActive ? '#6366f1' : '#374151', marginBottom: 4, fontSize: '0.95rem' }}>
-          {isDragActive ? 'Drop files here' : 'Drag & drop files here, or click to browse'}
+        <Upload className={`w-8 h-8 mx-auto mb-2.5 ${isDragActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+        <p className={`font-bold text-sm mb-1 ${isDragActive ? 'text-indigo-600' : 'text-slate-800'}`}>
+          {isDragActive ? 'Drop files here to upload' : 'Drag & drop PDF, DOCX, or TXT files here'}
         </p>
-        <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>PDF, DOCX, TXT — up to 50MB per file</p>
+        <p className="text-xs text-slate-400">Files up to 50MB each · Preserves page numbers for citations</p>
       </div>
 
-      {/* Uploading queue */}
+      {/* Uploading Queue */}
       <AnimatePresence>
         {uploading.map(u => (
-          <motion.div key={u.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: 9, background: '#eef2ff', border: '1px solid #c7d2fe', marginBottom: 8 }}>
-            <Loader2 size={15} color="#6366f1" className="animate-spin" />
-            <span style={{ flex: 1, fontSize: '0.85rem', color: '#374151' }}>Uploading {u.name}...</span>
+          <motion.div
+            key={u.id}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-2.5 p-3 mt-3 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-xs text-indigo-900 font-medium"
+          >
+            <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+            <span>Uploading & parsing {u.name}...</span>
           </motion.div>
         ))}
       </AnimatePresence>
 
-      {/* Documents list */}
-      {documents.length === 0 && uploading.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
-          <FileText size={36} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
-          <p style={{ fontSize: '0.875rem' }}>No documents in this folder yet. Drop files above to start indexing!</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <h2 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-            Documents ({documents.length})
-          </h2>
-          {documents.map(doc => (
-            <motion.div key={doc.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-              onClick={() => setSelectedDoc(doc)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
-                borderRadius: 10, border: '1px solid #f3f4f6', background: '#fff',
-                cursor: 'pointer', transition: 'box-shadow 0.15s, border-color 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = '#e0e7ff' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#f3f4f6' }}>
-              <span style={{ fontSize: '1.25rem' }}>{getFileIcon(doc.file_type)}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontWeight: 600, fontSize: '0.875rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {doc.filename}
-                </p>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                  {formatBytes(doc.file_size)} {doc.page_count ? `· ${doc.page_count} pages` : ''} · {formatRelativeTime(doc.created_at)}
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#f9fafb', padding: '4px 8px', borderRadius: 6 }}>
-                {statusIcon[doc.status]}
-                <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'capitalize' }}>{statusLabel[doc.status]}</span>
-              </div>
-              <button
-                onClick={(e) => deleteDocument(e, doc.id, doc.filename)}
-                title="Delete document"
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                  color: '#9ca3af', display: 'flex', alignItems: 'center', borderRadius: 5,
-                  transition: 'color 0.12s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                onMouseLeave={e => e.currentTarget.style.color = '#9ca3af'}
+      {/* Documents List */}
+      <div className="mt-8">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+          Documents ({documents.length})
+        </h2>
+
+        {documents.length === 0 && uploading.length === 0 ? (
+          <div className="text-center py-12 text-slate-400 bg-slate-50/40 rounded-2xl border border-slate-200/70">
+            <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm font-medium">No documents uploaded yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {documents.map(doc => (
+              <motion.div
+                key={doc.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => setSelectedDoc(doc)}
+                className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-indigo-200 hover:shadow-xs transition-all cursor-pointer group"
               >
-                <Trash2 size={14} />
-              </button>
-            </motion.div>
-          ))}
-        </div>
-      )}
+                <span className="text-xl">{getFileIcon(doc.file_type)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-slate-900 truncate group-hover:text-indigo-600 transition-colors">
+                    {doc.filename}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {formatBytes(doc.file_size)} {doc.page_count ? `· ${doc.page_count} pages` : ''} · {formatRelativeTime(doc.created_at)}
+                  </p>
+                </div>
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold capitalize ${statusBadge[doc.status]}`}>
+                  {statusIcon[doc.status]}
+                  <span>{doc.status}</span>
+                </div>
+                <button
+                  onClick={e => deleteDocument(e, doc.id, doc.filename)}
+                  title="Delete document"
+                  className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Document Details Modal */}
       <AnimatePresence>
         {selectedDoc && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.4)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-            }}
-            onClick={() => setSelectedDoc(null)}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              style={{
-                width: '100%', maxWidth: 460, background: '#fff', borderRadius: 16,
-                padding: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
-              }}
-              onClick={e => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '1.4rem' }}>{getFileIcon(selectedDoc.file_type)}</span>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setSelectedDoc(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl">{getFileIcon(selectedDoc.file_type)}</span>
                   <div>
-                    <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827' }}>Document Details</h3>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>ID: {selectedDoc.id.slice(0, 8)}...</p>
+                    <h3 className="font-bold text-base text-slate-900">Document Metadata</h3>
+                    <p className="text-xs text-slate-400">ID: {selectedDoc.id.slice(0, 8)}...</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedDoc(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>
-                  <X size={18} />
+                <button onClick={() => setSelectedDoc(null)} className="text-slate-400 hover:text-slate-700">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.85rem', color: '#374151', borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Filename:</span>
-                  <span style={{ fontWeight: 600, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedDoc.filename}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>File Type:</span>
-                  <span style={{ fontWeight: 600, textTransform: 'uppercase' }}>{selectedDoc.file_type}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>File Size:</span>
-                  <span style={{ fontWeight: 600 }}>{formatBytes(selectedDoc.file_size)}</span>
-                </div>
-                {selectedDoc.page_count && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#6b7280' }}>Page Count:</span>
-                    <span style={{ fontWeight: 600 }}>{selectedDoc.page_count} pages</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Indexing Status:</span>
-                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {statusIcon[selectedDoc.status]} {statusLabel[selectedDoc.status]}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Uploaded:</span>
-                  <span style={{ fontWeight: 600 }}>{formatRelativeTime(selectedDoc.created_at)}</span>
-                </div>
-                {selectedDoc.error_message && (
-                  <div style={{ background: '#fef2f2', padding: 10, borderRadius: 8, color: '#dc2626', fontSize: '0.8rem', marginTop: 6 }}>
-                    Error: {selectedDoc.error_message}
-                  </div>
-                )}
+              <div className="space-y-2.5 text-xs text-slate-700 pt-3 border-t border-slate-100">
+                <div className="flex justify-between"><span className="text-slate-400">Filename:</span><span className="font-semibold truncate max-w-60">{selectedDoc.filename}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Type:</span><span className="font-semibold uppercase">{selectedDoc.file_type}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Size:</span><span className="font-semibold">{formatBytes(selectedDoc.file_size)}</span></div>
+                {selectedDoc.page_count && <div className="flex justify-between"><span className="text-slate-400">Pages:</span><span className="font-semibold">{selectedDoc.page_count}</span></div>}
+                <div className="flex justify-between"><span className="text-slate-400">Status:</span><span className="font-semibold capitalize">{selectedDoc.status}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Uploaded:</span><span className="font-semibold">{formatRelativeTime(selectedDoc.created_at)}</span></div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setSelectedDoc(null)}
-                  style={{
-                    padding: '8px 16px', borderRadius: 8, border: '1.5px solid #e5e7eb',
-                    background: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-                  }}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Close
                 </button>
