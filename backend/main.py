@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from config import get_settings
 from routes import folders, documents, chat, graph, quiz
@@ -16,7 +15,6 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
-    # Ensure upload directory exists
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.chroma_persist_dir).mkdir(parents=True, exist_ok=True)
     print(f"✅ Synthesis backend starting — model: {settings.groq_model}")
@@ -31,10 +29,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS ─────────────────────────────────────────────────────────────────────
+# ── CORS Configuration ────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        settings.frontend_url,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

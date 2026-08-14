@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL 
-  ? `${import.meta.env.VITE_API_BASE_URL}/api`
+const RAW_API_URL = import.meta.env.VITE_API_BASE_URL
+const BASE_URL = (RAW_API_URL && RAW_API_URL.trim() !== '')
+  ? `${RAW_API_URL.replace(/\/$/, '')}/api`
   : '/api'
 
 async function request(path, options = {}, token) {
@@ -21,10 +22,11 @@ async function request(path, options = {}, token) {
   }
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  const res = await fetch(`${BASE_URL}${cleanPath}`, { ...options, headers })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'Request failed')
+    throw new Error(err.detail || `Request failed with status ${res.status}`)
   }
   if (res.status === 204) return undefined
   return res.json()
@@ -32,8 +34,8 @@ async function request(path, options = {}, token) {
 
 // ── Folders ───────────────────────────────────────────────────────────────────
 export const foldersApi = {
-  list: (token) => request('/folders/', {}, token),
-  create: (token, data) => request('/folders/', { method: 'POST', body: JSON.stringify(data) }, token),
+  list: (token) => request('/folders', {}, token),
+  create: (token, data) => request('/folders', { method: 'POST', body: JSON.stringify(data) }, token),
   update: (token, id, data) => request(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token),
   delete: (token, id) => request(`/folders/${id}`, { method: 'DELETE' }, token),
   get: (token, id) => request(`/folders/${id}`, {}, token),
@@ -73,9 +75,9 @@ export const documentsApi = {
 // ── Chat ──────────────────────────────────────────────────────────────────────
 export const chatApi = {
   listChats: (token, folderId) =>
-    request(`/chat/${folderId ? `?folder_id=${folderId}` : ''}`, {}, token),
+    request(`/chat${folderId ? `?folder_id=${folderId}` : ''}`, {}, token),
   createChat: (token, data) =>
-    request('/chat/', { method: 'POST', body: JSON.stringify(data) }, token),
+    request('/chat', { method: 'POST', body: JSON.stringify(data) }, token),
   getMessages: (token, chatId) =>
     request(`/chat/${chatId}/messages`, {}, token),
   deleteChat: (token, chatId) =>

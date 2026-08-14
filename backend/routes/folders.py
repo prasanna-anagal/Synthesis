@@ -11,6 +11,7 @@ from models.folder import FolderCreate, FolderUpdate, FolderResponse
 router = APIRouter(prefix="/folders", tags=["folders"])
 
 
+@router.get("", response_model=list[FolderResponse])
 @router.get("/", response_model=list[FolderResponse])
 async def list_folders(
     current_user: dict = Depends(get_current_user),
@@ -44,6 +45,7 @@ async def list_folders(
     return folders
 
 
+@router.post("", response_model=FolderResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=FolderResponse, status_code=status.HTTP_201_CREATED)
 async def create_folder(
     payload: FolderCreate,
