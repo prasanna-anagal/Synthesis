@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/store'
 import { quizApi } from '@/lib/api'
-import { BookOpen, Loader2, CheckCircle2, XCircle, ChevronRight, RotateCcw, BarChart3, Sparkles } from 'lucide-react'
+import { toast } from 'sonner'
+import { BookOpen, Loader2, CheckCircle2, XCircle, ChevronRight, RotateCcw, BarChart3, Sparkles, FileText, Check, X } from 'lucide-react'
 
 const difficultyColors = { easy: '#22c55e', medium: '#f59e0b', hard: '#ef4444' }
 const difficultyBg = { easy: '#f0fdf4', medium: '#fffbeb', hard: '#fef2f2' }
@@ -11,12 +12,13 @@ const difficultyBg = { easy: '#f0fdf4', medium: '#fffbeb', hard: '#fef2f2' }
 export default function Quiz() {
   const { folderId } = useParams()
   const { user } = useAuthStore()
-  const [phase, setPhase] = useState('setup') // setup | quiz | results
+  const [phase, setPhase] = useState('setup') // setup | quiz | results | review
   const [difficulty, setDifficulty] = useState('medium')
   const [numQuestions, setNumQuestions] = useState(10)
   const [loading, setLoading] = useState(false)
   const [attemptId, setAttemptId] = useState(null)
   const [questions, setQuestions] = useState([])
+  const [userAnswers, setUserAnswers] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [answered, setAnswered] = useState(false)
@@ -38,13 +40,15 @@ export default function Quiz() {
       const data = await quizApi.generate(user.token, folderId, numQuestions, difficulty)
       setAttemptId(data.attempt_id)
       setQuestions(data.questions)
+      setUserAnswers([])
       setCurrentIndex(0)
       setScore({ correct: 0, total: 0 })
       setSelectedAnswer(null)
       setAnswered(false)
       setPhase('quiz')
+      toast.success(`Quiz generated with ${data.questions.length} questions!`)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message || 'Failed to generate quiz')
     } finally {
       setLoading(false)
     }
@@ -60,11 +64,11 @@ export default function Quiz() {
     setLastResult(result)
     setNextDifficulty(result.next_difficulty)
     setScore({ correct: result.correct_answers, total: score.total + 1 })
+    setUserAnswers(prev => [...prev, { question: q, selected: index, result }])
   }
 
   const nextQuestion = async () => {
     if (currentIndex + 1 >= questions.length) {
-      // Complete quiz
       const data = await quizApi.complete(user.token, attemptId)
       setMastery(data.mastery_level)
       setPhase('results')
@@ -119,7 +123,7 @@ export default function Quiz() {
 
       <button onClick={startQuiz} disabled={loading}
         style={{ width: '100%', height: 44, borderRadius: 9, border: 'none', background: loading ? '#a5b4fc' : '#6366f1', color: '#fff', fontWeight: 700, fontSize: '0.95rem', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: 'inherit' }}>
-        {loading ? <><Loader2 size={16} className="animate-spin" /> Generating questions...</> : <><Sparkles size={16} /> Start Quiz</>}
+        {loading ? <><Loader2 size={16} className="animate-spin" /> Generating questions from docs...</> : <><Sparkles size={16} /> Start Quiz</>}
       </button>
 
       {/* History */}
@@ -142,6 +146,47 @@ export default function Quiz() {
     </div>
   )
 
+  // Review phase
+  if (phase === 'review') return (
+    <div style={{ padding: '48px 40px', maxWidth: '720px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#111827' }}>Quiz Review</h1>
+        <button onClick={() => setPhase('results')} style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#fff', fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer' }}>
+          Back to Summary
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {userAnswers.map((item, idx) => (
+          <div key={idx} style={{ background: '#fff', border: '1px solid #f3f4f6', borderRadius: 12, padding: 20 }}>
+            <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginBottom: 6 }}>Question {idx + 1} · {item.question.source_document}</div>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#111827', marginBottom: 14 }}>{item.question.question}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+              {item.question.options.map((opt, optIdx) => {
+                const isCorrect = optIdx === item.question.correct_index
+                const isSelected = optIdx === item.selected
+                let bg = '#fafafa', border = '#f3f4f6'
+                if (isCorrect) { bg = '#f0fdf4'; border = '#86efac' }
+                else if (isSelected && !isCorrect) { bg = '#fef2f2'; border = '#fca5a5' }
+
+                return (
+                  <div key={optIdx} style={{ padding: '8px 12px', borderRadius: 7, border: `1px solid ${border}`, background: bg, fontSize: '0.83rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>{String.fromCharCode(65 + optIdx)}. {opt}</span>
+                    {isCorrect && <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.75rem' }}>Correct Answer</span>}
+                    {isSelected && !isCorrect && <span style={{ color: '#dc2626', fontWeight: 700, fontSize: '0.75rem' }}>Your Answer</span>}
+                  </div>
+                )
+              })}
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', background: '#f9fafb', padding: 10, borderRadius: 7 }}>
+              💡 {item.question.explanation}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
   // Results phase
   if (phase === 'results') return (
     <div style={{ padding: '48px 40px', maxWidth: '600px', textAlign: 'center' }}>
@@ -149,9 +194,9 @@ export default function Quiz() {
         <BookOpen size={28} color="#6366f1" />
       </div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8 }}>Quiz Complete!</h1>
-      <p style={{ color: '#6b7280', marginBottom: '32px' }}>Here's how you did</p>
+      <p style={{ color: '#6b7280', marginBottom: '32px' }}>Here's how you performed</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '28px' }}>
         {[
           { label: 'Score', value: `${Math.round((score.correct / score.total) * 100)}%`, color: '#6366f1' },
           { label: 'Correct', value: `${score.correct}/${score.total}`, color: '#22c55e' },
@@ -170,10 +215,16 @@ export default function Quiz() {
           style={{ height: '100%', background: 'linear-gradient(90deg, #818cf8, #6366f1)', borderRadius: 100 }} />
       </div>
 
-      <button onClick={() => setPhase('setup')}
-        style={{ width: '100%', height: 42, borderRadius: 9, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', fontFamily: 'inherit' }}>
-        <RotateCcw size={15} /> Try Again
-      </button>
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button onClick={() => setPhase('review')}
+          style={{ flex: 1, height: 42, borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'inherit' }}>
+          <FileText size={15} /> Review Answers
+        </button>
+        <button onClick={() => setPhase('setup')}
+          style={{ flex: 1, height: 42, borderRadius: 9, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'inherit' }}>
+          <RotateCcw size={15} /> Take Another
+        </button>
+      </div>
     </div>
   )
 
