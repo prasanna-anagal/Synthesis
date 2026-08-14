@@ -1,11 +1,25 @@
-const BASE_URL = '/api'
+import { supabase } from '@/lib/supabase'
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL 
+  ? `${import.meta.env.VITE_API_BASE_URL}/api`
+  : '/api'
 
 async function request(path, options = {}, token) {
+  let authToken = token
+  if (!authToken) {
+    try {
+      const { data } = await supabase.auth.getSession()
+      authToken = data?.session?.access_token
+    } catch (e) {
+      console.warn('Could not retrieve Supabase session token:', e)
+    }
+  }
+
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
   if (!res.ok) {
@@ -29,11 +43,19 @@ export const foldersApi = {
 export const documentsApi = {
   list: (token, folderId) => request(`/documents/${folderId}`, {}, token),
   upload: async (token, folderId, file) => {
+    let authToken = token
+    if (!authToken) {
+      const { data } = await supabase.auth.getSession()
+      authToken = data?.session?.access_token
+    }
     const form = new FormData()
     form.append('file', file)
+    const headers = {}
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`
+
     const res = await fetch(`${BASE_URL}/documents/${folderId}/upload`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers,
       body: form,
     })
     if (!res.ok) {
@@ -59,12 +81,21 @@ export const chatApi = {
   deleteChat: (token, chatId) =>
     request(`/chat/${chatId}`, { method: 'DELETE' }, token),
   /** Returns raw Response for SSE streaming */
-  sendMessage: (token, chatId, content, folderId) =>
-    fetch(`${BASE_URL}/chat/${chatId}/message`, {
+  sendMessage: async (token, chatId, content, folderId) => {
+    let authToken = token
+    if (!authToken) {
+      const { data } = await supabase.auth.getSession()
+      authToken = data?.session?.access_token
+    }
+    const headers = { 'Content-Type': 'application/json' }
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`
+
+    return fetch(`${BASE_URL}/chat/${chatId}/message`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ chat_id: chatId, content, folder_id: folderId }),
-    }),
+    })
+  },
 }
 
 // ── Graph ─────────────────────────────────────────────────────────────────────

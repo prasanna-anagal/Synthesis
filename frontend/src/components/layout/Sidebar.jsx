@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { Brain, Plus, MessageSquare, Network, BookOpen, LogOut, Folder, PanelLeftClose, PanelLeft, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/store'
 import { foldersApi } from '@/lib/api'
@@ -16,37 +17,50 @@ export default function Sidebar() {
   const [newFolderName, setNewFolderName] = useState('')
   const [creating, setCreating] = useState(false)
 
+  const fetchFolders = async () => {
+    try {
+      const data = await foldersApi.list(user?.token)
+      setFolders(data || [])
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   useEffect(() => {
-    if (!user?.token) return
-    foldersApi.list(user.token).then(setFolders).catch(console.error)
+    fetchFolders()
   }, [user?.token])
 
   const createFolder = async () => {
-    if (!newFolderName.trim() || !user?.token || creating) return
+    const name = newFolderName.trim()
+    if (!name || creating) return
     setCreating(true)
     try {
-      const folder = await foldersApi.create(user.token, { name: newFolderName.trim() })
+      const folder = await foldersApi.create(user?.token, { name })
       setFolders(prev => [folder, ...prev])
       setNewFolderName('')
       setShowNewFolder(false)
+      toast.success(`Folder "${folder.name}" created`)
       navigate(`/app/folder/${folder.id}`)
     } catch (e) {
       console.error(e)
+      toast.error(e.message || 'Failed to create folder')
     } finally {
       setCreating(false)
     }
   }
 
-  const deleteFolder = async (e, folderId) => {
+  const deleteFolder = async (e, folderId, folderName) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!user?.token || !confirm('Delete this folder and all its documents?')) return
+    if (!confirm(`Delete folder "${folderName}" and all its documents?`)) return
     try {
-      await foldersApi.delete(user.token, folderId)
+      await foldersApi.delete(user?.token, folderId)
       setFolders(prev => prev.filter(f => f.id !== folderId))
+      toast.success(`Deleted folder "${folderName}"`)
       if (location.pathname.includes(folderId)) navigate('/app')
     } catch (err) {
       console.error(err)
+      toast.error(err.message || 'Failed to delete folder')
     }
   }
 
@@ -99,7 +113,7 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+          className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -115,14 +129,14 @@ export default function Sidebar() {
               <button
                 type="button"
                 onClick={() => setShowNewFolder(!showNewFolder)}
-                className="p-1 rounded hover:bg-slate-200/60 text-slate-500 hover:text-slate-800 transition-colors"
+                className="p-1 rounded hover:bg-slate-200/60 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                 title="Create folder"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Inline New Folder Input */}
+            {/* Inline New Folder Form */}
             <AnimatePresence>
               {showNewFolder && (
                 <motion.div
@@ -131,31 +145,33 @@ export default function Sidebar() {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden mb-2 px-1"
                 >
-                  <div className="flex items-center gap-1.5">
+                  <form
+                    onSubmit={e => { e.preventDefault(); createFolder() }}
+                    className="flex items-center gap-1.5"
+                  >
                     <input
                       autoFocus
                       value={newFolderName}
                       onChange={e => setNewFolderName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') createFolder(); if (e.key === 'Escape') setShowNewFolder(false) }}
+                      onKeyDown={e => { if (e.key === 'Escape') setShowNewFolder(false) }}
                       placeholder="Folder name..."
                       className="flex-1 h-8 rounded-md border border-indigo-300 px-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     />
                     <button
-                      type="button"
-                      onClick={createFolder}
+                      type="submit"
                       disabled={creating || !newFolderName.trim()}
-                      className="h-8 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold disabled:opacity-50 transition-colors"
+                      className="h-8 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
                     >
-                      Add
+                      {creating ? 'Adding...' : 'Add'}
                     </button>
-                  </div>
+                  </form>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {folders.length === 0 && (
               <div className="px-3 py-4 text-center text-xs text-slate-400">
-                No folders created yet.
+                No folders created yet. Click + to add one.
               </div>
             )}
 
@@ -163,7 +179,6 @@ export default function Sidebar() {
               const folderActive = isActive(`/app/folder/${folder.id}`)
               return (
                 <div key={folder.id} className="folder-item group">
-                  {/* Separate row flex container — NO nested button inside Link */}
                   <div
                     className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                       folderActive
@@ -180,8 +195,8 @@ export default function Sidebar() {
                     </Link>
                     <button
                       type="button"
-                      className="delete-btn p-1 text-slate-400 hover:text-rose-600 rounded transition-colors flex-shrink-0 ml-1"
-                      onClick={e => deleteFolder(e, folder.id)}
+                      className="delete-btn p-1 text-slate-400 hover:text-rose-600 rounded transition-colors flex-shrink-0 ml-1 cursor-pointer"
+                      onClick={e => deleteFolder(e, folder.id, folder.name)}
                       title="Delete folder"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -207,7 +222,7 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={() => { setCollapsed(false); setShowNewFolder(true) }}
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
               title="New Folder"
             >
               <Plus className="w-5 h-5" />
@@ -230,7 +245,7 @@ export default function Sidebar() {
               type="button"
               onClick={signOut}
               title="Sign out"
-              className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+              className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
@@ -240,7 +255,7 @@ export default function Sidebar() {
             type="button"
             onClick={signOut}
             title="Sign out"
-            className="p-2 mx-auto flex text-slate-400 hover:text-rose-600 transition-colors"
+            className="p-2 mx-auto flex text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
