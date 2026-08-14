@@ -2,8 +2,10 @@
 Synthesis — FastAPI Application Entry Point
 """
 import os
+import traceback
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from config import get_settings
@@ -28,6 +30,17 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# ── Global Exception Handler ──────────────────────────────────────────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_msg = str(exc)
+    tb = traceback.format_exc()
+    print(f"🔥 Uncaught Exception on {request.url.path}: {error_msg}\n{tb}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Server Error: {error_msg or 'Unexpected error'}"},
+    )
 
 # ── CORS Configuration ────────────────────────────────────────────────────────
 app.add_middleware(

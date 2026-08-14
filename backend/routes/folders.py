@@ -12,7 +12,6 @@ router = APIRouter(prefix="/folders", tags=["folders"])
 
 
 @router.get("", response_model=list[FolderResponse])
-@router.get("/", response_model=list[FolderResponse])
 async def list_folders(
     current_user: dict = Depends(get_current_user),
     db=Depends(get_supabase_admin),
@@ -46,7 +45,6 @@ async def list_folders(
 
 
 @router.post("", response_model=FolderResponse, status_code=status.HTTP_201_CREATED)
-@router.post("/", response_model=FolderResponse, status_code=status.HTTP_201_CREATED)
 async def create_folder(
     payload: FolderCreate,
     current_user: dict = Depends(get_current_user),
