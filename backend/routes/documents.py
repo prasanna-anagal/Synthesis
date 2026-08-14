@@ -104,7 +104,7 @@ async def upload_document(
 ):
     """Upload a document and trigger async processing (parse + embed)."""
     # Validate folder ownership
-    folder = db.table("folders").select("id").eq("id", folder_id).eq("user_id", current_user["id"]).single().execute()
+    folder = db.table("folders").select("id").eq("id", folder_id).eq("user_id", current_user["id"]).execute()
     if not folder.data:
         raise HTTPException(status_code=404, detail="Folder not found")
 
@@ -195,7 +195,7 @@ async def list_documents(
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
-        for row in response.data
+        for row in (response.data or [])
     ]
 
 
@@ -213,14 +213,13 @@ async def get_document_status(
         .eq("id", document_id)
         .eq("folder_id", folder_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
 
     if not response.data:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    return response.data
+    return response.data[0]
 
 
 @router.delete("/{folder_id}/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -237,7 +236,6 @@ async def delete_document(
         .select("id, file_path")
         .eq("id", document_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
 
@@ -252,11 +250,11 @@ async def delete_document(
 
     # Remove file from disk
     try:
-        file_path = doc.data.get("file_path")
+        file_path = doc.data[0].get("file_path")
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
     except Exception:
         pass
 
-    # Delete from DB (chunks cascade automatically)
+    # Delete from DB
     db.table("documents").delete().eq("id", document_id).execute()

@@ -26,7 +26,7 @@ async def list_folders(
     )
 
     folders = []
-    for row in response.data:
+    for row in (response.data or []):
         doc_count = 0
         if row.get("documents") and isinstance(row["documents"], list):
             doc_count = row["documents"][0].get("count", 0) if row["documents"] else 0
@@ -52,10 +52,11 @@ async def create_folder(
 ):
     """Create a new folder."""
     now = datetime.utcnow().isoformat()
+    folder_id = str(uuid.uuid4())
     response = (
         db.table("folders")
         .insert({
-            "id": str(uuid.uuid4()),
+            "id": folder_id,
             "user_id": current_user["id"],
             "name": payload.name,
             "description": payload.description,
@@ -65,7 +66,14 @@ async def create_folder(
         .execute()
     )
 
-    row = response.data[0]
+    row = response.data[0] if response.data else {
+        "id": folder_id,
+        "user_id": current_user["id"],
+        "name": payload.name,
+        "description": payload.description,
+        "created_at": now,
+        "updated_at": now,
+    }
     return FolderResponse(
         id=row["id"],
         user_id=row["user_id"],
@@ -89,14 +97,13 @@ async def get_folder(
         .select("*")
         .eq("id", folder_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
 
     if not response.data:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    row = response.data
+    row = response.data[0]
     return FolderResponse(
         id=row["id"],
         user_id=row["user_id"],

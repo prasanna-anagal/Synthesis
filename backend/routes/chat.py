@@ -36,7 +36,6 @@ async def _run_agent_stream(
 ) -> AsyncGenerator[str, None]:
     """
     Full multi-step agent reasoning loop, streaming each step as SSE events.
-    
     Flow: plan → retrieve → evaluate → [re-retrieve if needed] → synthesize (streamed)
     """
     all_chunks = []
@@ -49,7 +48,6 @@ async def _run_agent_stream(
             "message": "Analyzing your question and deciding retrieval strategy...",
         })
 
-        # Get available documents in folder
         docs_response = (
             db.table("documents")
             .select("id, original_name, file_type")
@@ -64,7 +62,6 @@ async def _run_agent_stream(
 
         plan = plan_retrieval(query=query, available_documents=available_docs)
 
-        # If the agent wants to clarify, return early
         if plan.strategy == "clarify" and plan.clarification_question:
             yield _sse_event("clarification", {
                 "question": plan.clarification_question,
@@ -119,7 +116,6 @@ async def _run_agent_stream(
                 "message": f"Context incomplete. Searching for: {', '.join(evaluation.missing_aspects[:2])}...",
             })
 
-            # Do a second retrieval pass with follow-up queries
             from agent.planner import RetrievalPlan
             followup_plan = RetrievalPlan(
                 strategy="folder_wide",
@@ -130,7 +126,6 @@ async def _run_agent_stream(
             )
             extra_chunks = execute_retrieval(folder_id=folder_id, plan=followup_plan)
 
-            # Merge, deduplicate
             existing_ids = {c.chroma_id for c in all_chunks}
             for chunk in extra_chunks:
                 if chunk.chroma_id not in existing_ids:
@@ -145,7 +140,6 @@ async def _run_agent_stream(
         })
 
         # ── Step 4: Synthesize (streamed) ─────────────────────────────────────
-        # Get recent chat history
         history_resp = (
             db.table("messages")
             .select("role, content")
@@ -166,7 +160,6 @@ async def _run_agent_stream(
             answer_tokens.append(token)
             yield _sse_event("token", {"text": token})
 
-        # Extract citations from full answer
         citations = _extract_citations(full_answer, all_chunks)
         citations_data = [
             {
@@ -199,9 +192,9 @@ async def _run_agent_stream(
             "created_at": now,
         }).execute()
 
-        # Update chat title from first message if it's "New Chat"
-        chat_resp = db.table("chats").select("title").eq("id", chat_id).single().execute()
-        if chat_resp.data and chat_resp.data["title"] == "New Chat":
+        # Update chat title if still default
+        chat_resp = db.table("chats").select("title").eq("id", chat_id).execute()
+        if chat_resp.data and chat_resp.data[0].get("title") == "New Chat":
             title = query[:60] + ("..." if len(query) > 60 else "")
             db.table("chats").update({"title": title, "updated_at": now}).eq("id", chat_id).execute()
 
@@ -279,8 +272,7 @@ async def get_messages(
     db=Depends(get_supabase_admin),
 ):
     """Fetch all messages in a chat."""
-    # Verify chat ownership
-    chat = db.table("chats").select("id").eq("id", chat_id).eq("user_id", current_user["id"]).single().execute()
+    chat = db.table("chats").select("id").eq("id", chat_id).eq("user_id", current_user["id"]).execute()
     if not chat.data:
         raise HTTPException(status_code=404, detail="Chat not found")
 
@@ -317,27 +309,21 @@ async def send_message(
     current_user: dict = Depends(get_current_user),
     db=Depends(get_supabase_admin),
 ):
-    """
-    Send a user message and return streaming SSE response with agent reasoning.
-    Frontend should handle text/event-stream content type.
-    """
-    # Verify chat ownership
+    """Send user message and return SSE response with reasoning."""
     chat = (
         db.table("chats")
         .select("id, folder_id")
         .eq("id", chat_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
     if not chat.data:
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    folder_id = payload.folder_id or chat.data.get("folder_id")
+    folder_id = payload.folder_id or chat.data[0].get("folder_id")
     if not folder_id:
         raise HTTPException(status_code=400, detail="No folder specified for this chat")
 
-    # Save user message
     now = datetime.utcnow().isoformat()
     db.table("messages").insert({
         "id": str(uuid.uuid4()),

@@ -18,61 +18,43 @@ async def get_knowledge_graph(
     current_user: dict = Depends(get_current_user),
     db=Depends(get_supabase_admin),
 ):
-    """
-    Return the knowledge graph for a folder.
-    Uses cached version if available and not force_refresh.
-    Rebuilds from ChromaDB chunks if cache is stale or missing.
-    """
-    # Verify folder ownership
+    """Return knowledge graph for folder. Uses cache unless force_refresh=True."""
     folder = (
         db.table("folders")
         .select("id")
         .eq("id", folder_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
     if not folder.data:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    # Check cache
     if not force_refresh:
         cache = (
             db.table("concept_graph_cache")
             .select("nodes_json, edges_json, updated_at")
             .eq("folder_id", folder_id)
-            .single()
             .execute()
         )
         if cache.data:
+            c = cache.data[0]
             return {
-                "nodes": json.loads(cache.data["nodes_json"]) if isinstance(cache.data["nodes_json"], str) else cache.data["nodes_json"],
-                "edges": json.loads(cache.data["edges_json"]) if isinstance(cache.data["edges_json"], str) else cache.data["edges_json"],
+                "nodes": json.loads(c["nodes_json"]) if isinstance(c["nodes_json"], str) else c["nodes_json"],
+                "edges": json.loads(c["edges_json"]) if isinstance(c["edges_json"], str) else c["edges_json"],
                 "cached": True,
-                "updated_at": cache.data["updated_at"],
+                "updated_at": c["updated_at"],
             }
 
-    # Fetch all document chunks for this folder from Postgres (metadata only)
-    chunks_response = (
-        db.table("document_chunks")
-        .select("document_id, page_number, documents(original_name)")
-        .eq("documents.folder_id", folder_id)
-        .limit(500)
-        .execute()
-    )
-
-    if not chunks_response.data:
-        return {"nodes": [], "edges": [], "cached": False, "message": "No indexed documents found"}
-
-    # We need chunk content — fetch it from ChromaDB
     from services.embedder import get_or_create_collection
     collection = get_or_create_collection(folder_id)
 
-    # Get all chunks from ChromaDB for this folder
     try:
         all_data = collection.get(include=["documents", "metadatas"])
     except Exception:
         return {"nodes": [], "edges": [], "cached": False, "message": "Vector store not initialized"}
+
+    if not all_data.get("documents"):
+        return {"nodes": [], "edges": [], "cached": False, "message": "No indexed documents found"}
 
     chunks_with_meta = []
     for i, content in enumerate(all_data.get("documents", [])):
@@ -84,10 +66,8 @@ async def get_knowledge_graph(
             "page_number": meta.get("page_number"),
         })
 
-    # Extract graph
     graph = extract_graph_from_chunks(chunks_with_meta)
 
-    # Cache result
     now = datetime.utcnow().isoformat()
     nodes_json = json.dumps(graph["nodes"])
     edges_json = json.dumps(graph["edges"])

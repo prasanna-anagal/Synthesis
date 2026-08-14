@@ -2,8 +2,13 @@
 Unit tests for document parsing and text chunking logic.
 """
 import os
+import sys
+from pathlib import Path
 import tempfile
 import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from services.parser import parse_txt, _chunk_text
 
 

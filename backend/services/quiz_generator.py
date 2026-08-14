@@ -68,7 +68,6 @@ def generate_quiz_questions(
     client = _get_groq_client()
     all_questions: List[QuizQuestion] = []
 
-    # Distribute questions across chunks (at least 1 per chunk up to num_questions)
     num_chunks = min(len(chunks_with_meta), num_questions)
     questions_per_chunk = max(1, num_questions // num_chunks)
     remaining = num_questions
@@ -102,7 +101,6 @@ def generate_quiz_questions(
             )
 
             raw = response.choices[0].message.content.strip()
-            # Strip markdown fences if present
             raw = raw.strip("`").strip()
             if raw.startswith("json"):
                 raw = raw[4:]
@@ -125,7 +123,6 @@ def generate_quiz_questions(
                 remaining -= 1
 
         except Exception as e:
-            # Skip chunk on error, continue with others
             print(f"Quiz generation error for chunk {i}: {e}")
             continue
 
@@ -137,12 +134,6 @@ def calculate_next_difficulty(
     recent_correct: int,
     recent_total: int,
 ) -> Difficulty:
-    """
-    Adaptive difficulty algorithm:
-    - >= 80% correct → increase difficulty
-    - <= 40% correct → decrease difficulty
-    - Otherwise → maintain current difficulty
-    """
     if recent_total == 0:
         return current_difficulty
 
@@ -174,15 +165,16 @@ def calculate_mastery_level(
     if not attempt_history:
         return 0.0
 
-    # Exponential recency weighting
     total_weight = 0.0
     weighted_score = 0.0
-    decay = 0.7  # older attempts count less
+    decay = 0.7
 
     for i, attempt in enumerate(reversed(attempt_history)):
         weight = decay ** i
-        score = attempt.get("score", 0) / max(attempt.get("total_questions", 1), 1)
-        weighted_score += score * weight
+        raw_score = attempt.get("score", 0)
+        # Normalize percentage score (0-100) to ratio (0.0-1.0)
+        score_ratio = (raw_score / 100.0) if raw_score > 1.0 else raw_score
+        weighted_score += score_ratio * weight
         total_weight += weight
 
-    return round(weighted_score / total_weight, 3) if total_weight > 0 else 0.0
+    return min(1.0, round(weighted_score / total_weight, 3)) if total_weight > 0 else 0.0

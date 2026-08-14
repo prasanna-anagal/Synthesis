@@ -21,19 +21,16 @@ async def generate_quiz(
     db=Depends(get_supabase_admin),
 ):
     """Generate quiz questions from a folder's documents."""
-    # Verify folder ownership
     folder = (
         db.table("folders")
         .select("id")
         .eq("id", payload.folder_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
     if not folder.data:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    # Fetch chunks from ChromaDB
     collection = get_or_create_collection(payload.folder_id)
     try:
         all_data = collection.get(include=["documents", "metadatas"])
@@ -47,7 +44,6 @@ async def generate_quiz(
     seen_pages = set()
     for i, content in enumerate(all_data["documents"]):
         meta = all_data["metadatas"][i] if all_data.get("metadatas") else {}
-        # Use diverse chunks (different pages) for quiz diversity
         page_key = (meta.get("document_id", ""), meta.get("page_number", i))
         if page_key not in seen_pages:
             chunks_with_meta.append({
@@ -59,7 +55,7 @@ async def generate_quiz(
             seen_pages.add(page_key)
 
     questions = generate_quiz_questions(
-        chunks_with_meta=chunks_with_meta[:20],  # Use top 20 diverse chunks
+        chunks_with_meta=chunks_with_meta[:20],
         num_questions=payload.num_questions,
         difficulty=payload.difficulty,
     )
@@ -67,7 +63,6 @@ async def generate_quiz(
     if not questions:
         raise HTTPException(status_code=500, detail="Failed to generate quiz questions. Check GROQ_API_KEY.")
 
-    # Create attempt record
     attempt_id = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
     questions_json = [q.dict() for q in questions]
@@ -103,24 +98,21 @@ async def submit_answer(
         .select("*")
         .eq("id", payload.attempt_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
 
     if not attempt.data:
         raise HTTPException(status_code=404, detail="Quiz attempt not found")
 
-    attempt_data = attempt.data
+    attempt_data = attempt.data[0]
     questions = json.loads(attempt_data["questions_json"])
 
-    # Find the question
     question = next((q for q in questions if q["id"] == payload.question_id), None)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
     is_correct = payload.selected_index == question["correct_index"]
 
-    # Update attempt stats
     answers = json.loads(attempt_data.get("answers_json") or "[]")
     answers.append({
         "question_id": payload.question_id,
@@ -136,11 +128,10 @@ async def submit_answer(
         "correct_answers": correct_total,
         "score": score,
         "answers_json": json.dumps(answers),
-        "updated_at": datetime.utcnow().isoformat() if hasattr(attempt_data, "updated_at") else None,
+        "updated_at": datetime.utcnow().isoformat(),
     }).eq("id", payload.attempt_id).execute()
 
-    # Calculate adaptive next difficulty
-    recent_answers = answers[-5:]  # Look at last 5 answers
+    recent_answers = answers[-5:]
     recent_correct = sum(1 for a in recent_answers if a["is_correct"])
     current_diff = Difficulty(question.get("difficulty", "medium"))
     next_difficulty = calculate_next_difficulty(current_diff, recent_correct, len(recent_answers))
@@ -167,18 +158,17 @@ async def complete_quiz(
         .select("*")
         .eq("id", attempt_id)
         .eq("user_id", current_user["id"])
-        .single()
         .execute()
     )
 
     if not attempt.data:
         raise HTTPException(status_code=404, detail="Attempt not found")
 
-    # Get all past attempts for this folder to calculate mastery
+    attempt_data = attempt.data[0]
     past_attempts = (
         db.table("quiz_attempts")
         .select("score, total_questions")
-        .eq("folder_id", attempt.data["folder_id"])
+        .eq("folder_id", attempt_data["folder_id"])
         .eq("user_id", current_user["id"])
         .order("created_at")
         .execute()
@@ -194,9 +184,9 @@ async def complete_quiz(
 
     return {
         "mastery_level": mastery,
-        "final_score": attempt.data["score"],
-        "total_questions": attempt.data["total_questions"],
-        "correct_answers": attempt.data["correct_answers"],
+        "final_score": attempt_data["score"],
+        "total_questions": attempt_data["total_questions"],
+        "correct_answers": attempt_data["correct_answers"],
     }
 
 
