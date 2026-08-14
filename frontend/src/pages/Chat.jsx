@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Send, Bot, User, Loader2, Plus, ChevronDown, ChevronRight, FileText, Sparkles, Brain } from 'lucide-react'
+import { toast } from 'sonner'
+import { Send, Bot, User, Loader2, Plus, ChevronDown, ChevronRight, FileText, Sparkles, Brain, Copy, Check, Trash2, ArrowDown } from 'lucide-react'
 import { useAuthStore } from '@/store'
 import { chatApi } from '@/lib/api'
 import { useSSE } from '@/hooks/useSSE'
@@ -64,29 +65,51 @@ function Message({ msg, isStreaming, streamingSteps }) {
   const isUser = msg.role === 'user'
   const steps = isStreaming ? streamingSteps : (msg.reasoning_steps || [])
   const citations = msg.citations || []
+  const [copied, setCopied] = useState(false)
+
+  const copyContent = () => {
+    navigator.clipboard.writeText(msg.content || '')
+    setCopied(true)
+    toast.success('Copied to clipboard!')
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '84%', flexDirection: isUser ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '85%', flexDirection: isUser ? 'row-reverse' : 'row' }}>
         <div style={{ width: 28, height: 28, borderRadius: '50%', background: isUser ? '#6366f1' : '#f3f4f6', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
           {isUser ? <User size={14} color="#fff" /> : <Bot size={14} color="#6b7280" />}
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {!isUser && steps.length > 0 && <ReasoningSteps steps={steps} isStreaming={isStreaming} />}
           <div style={{
+            position: 'relative',
             padding: isUser ? '10px 14px' : '12px 16px',
             borderRadius: isUser ? '12px 12px 4px 12px' : '4px 12px 12px 12px',
             background: isUser ? '#6366f1' : '#f9fafb',
             border: isUser ? 'none' : '1px solid #f0f0f0',
             color: isUser ? '#fff' : '#111827',
-          }}>
+          }} className="message-box">
             {isUser ? (
               <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.55 }}>{msg.content}</p>
             ) : (
               <div className="prose" style={{ fontSize: '0.9rem' }}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || '...'}</ReactMarkdown>
               </div>
+            )}
+            {!isUser && msg.content && (
+              <button
+                onClick={copyContent}
+                title="Copy response"
+                style={{
+                  position: 'absolute', top: 8, right: 8, background: '#fff',
+                  border: '1px solid #e5e7eb', borderRadius: 5, padding: 3,
+                  cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center',
+                }}
+              >
+                {copied ? <Check size={12} color="#22c55e" /> : <Copy size={12} />}
+              </button>
             )}
           </div>
           {!isUser && citations.length > 0 && (
@@ -106,6 +129,7 @@ export default function Chat() {
   const { user } = useAuthStore()
   const { startStream } = useSSE()
   const messagesEndRef = useRef(null)
+  const chatContainerRef = useRef(null)
 
   const [chats, setChats] = useState([])
   const [activeChatId, setActiveChatId] = useState(null)
@@ -115,6 +139,7 @@ export default function Chat() {
   const [streamingMessage, setStreamingMessage] = useState('')
   const [streamingSteps, setStreamingSteps] = useState([])
   const [streamingCitations, setStreamingCitations] = useState([])
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
 
   useEffect(() => {
     if (!user?.token) return
@@ -130,12 +155,31 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingMessage])
 
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current
+    setShowScrollBottom(scrollHeight - scrollTop - clientHeight > 150)
+  }
+
   const createAndSelectChat = async () => {
     if (!user?.token) return
     const chat = await chatApi.createChat(user.token, { folder_id: folderId })
     setChats(prev => [chat, ...prev])
     setActiveChatId(chat.id)
     setMessages([])
+    toast.success('Started new chat session')
+  }
+
+  const deleteChatSession = async (e, chatId) => {
+    e.stopPropagation()
+    if (!user?.token || !confirm('Delete this chat session?')) return
+    await chatApi.deleteChat(user.token, chatId)
+    setChats(prev => prev.filter(c => c.id !== chatId))
+    if (activeChatId === chatId) {
+      setActiveChatId(null)
+      setMessages([])
+    }
+    toast.success('Chat deleted')
   }
 
   const sendMessage = async () => {
@@ -184,14 +228,16 @@ export default function Chat() {
             setStreamingMessage('')
           } else if (event === 'error') {
             setIsStreaming(false)
+            toast.error(`Agent error: ${data.message}`)
             setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: `Error: ${data.message}`, created_at: new Date().toISOString() }])
           }
         },
         () => { setIsStreaming(false) },
-        (err) => { setIsStreaming(false); console.error(err) }
+        (err) => { setIsStreaming(false); toast.error('Connection interrupted'); console.error(err) }
       )
     } catch (err) {
       setIsStreaming(false)
+      toast.error(err.message || 'Failed to send message')
       console.error(err)
     }
   }
@@ -209,19 +255,25 @@ export default function Chat() {
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
           {chats.map(chat => (
-            <button key={chat.id} onClick={() => setActiveChatId(chat.id)}
-              style={{ width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', background: activeChatId === chat.id ? '#eef2ff' : 'transparent', marginBottom: 2, transition: 'background 0.12s' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: activeChatId === chat.id ? 600 : 400, color: activeChatId === chat.id ? '#6366f1' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
-              <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{formatRelativeTime(chat.updated_at)}</div>
-            </button>
+            <div key={chat.id} style={{ position: 'relative', display: 'flex', alignItems: 'center' }} className="folder-item">
+              <button onClick={() => setActiveChatId(chat.id)}
+                style={{ width: '100%', textAlign: 'left', padding: '8px 10px', paddingRight: '24px', borderRadius: 7, border: 'none', cursor: 'pointer', background: activeChatId === chat.id ? '#eef2ff' : 'transparent', marginBottom: 2, transition: 'background 0.12s' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: activeChatId === chat.id ? 600 : 400, color: activeChatId === chat.id ? '#6366f1' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
+                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{formatRelativeTime(chat.updated_at)}</div>
+              </button>
+              <button className="delete-btn" onClick={e => deleteChatSession(e, chat.id)}
+                style={{ position: 'absolute', right: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 2, borderRadius: 4 }}>
+                <Trash2 size={11} />
+              </button>
+            </div>
           ))}
         </div>
       </div>
 
       {/* Main chat area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {/* Messages */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
+        <div ref={chatContainerRef} onScroll={handleScroll} style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
           {!activeChatId && messages.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', color: '#9ca3af' }}>
               <div style={{ width: 52, height: 52, borderRadius: 13, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -245,6 +297,21 @@ export default function Chat() {
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Scroll to bottom floating button */}
+        {showScrollBottom && (
+          <button
+            onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            style={{
+              position: 'absolute', bottom: 85, right: 32, background: '#fff',
+              border: '1px solid #e5e7eb', borderRadius: '50%', width: 36, height: 36,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'pointer', color: '#6366f1',
+            }}
+          >
+            <ArrowDown size={16} />
+          </button>
+        )}
 
         {/* Input */}
         <div style={{ borderTop: '1px solid #f0f0f0', padding: '16px 24px' }}>
